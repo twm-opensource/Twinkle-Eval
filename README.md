@@ -87,10 +87,10 @@
 
 
 ### API 效能設定
-- **設定請求限流**：**無限制**或**指定 QPS（Queries Per Second）數值**。
-- **超時設定**。
-- **可選是否進行 SSL 驗證**。
-- **錯誤恢復機制**。
+- 設定請求限流：無限制或指定 QPS（Queries Per Second）數值。
+- 超時設定。
+- 可選是否進行 SSL 驗證。
+- 錯誤恢復機制。
 
 ## 安裝設定
 
@@ -262,7 +262,7 @@ logging:
 本專案由 [Twinkle AI](https://github.com/ai-twinkle) 與 [APMIC](https://www.apmic.ai/) 合作開發。
 
 ## 授權條款
-本儲存庫的源始碼依照 [MIT](https://github.com/ai-twinkle/Eval?tab=MIT-1-ov-file#readme) 授權條款開源。
+本儲存庫的原始碼依照 [MIT](https://github.com/ai-twinkle/Eval?tab=MIT-1-ov-file#readme) 授權條款開源。
 
 ## 引用
 如果您覺得此評測工具有幫助到，請再不吝引用如下：
