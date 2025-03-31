@@ -268,7 +268,7 @@ logging:
 如果您覺得此評測工具有幫助到，請再不吝引用如下：
 ```bibtex
 @misc{twinkle_eval,
-  author       = {Teds Lin, Huang Liang Hsun, Min Yi and Dave Sung},
+  author       = {Teds Lin, Huang Liang Hsun, Min Yi Chen and Dave Sung},
   title        = {Twinkle Eval: An Efficient and Accurate AI Evaluation Tool.},
   year         = {2025},
   url          = {https://github.com/ai-twinkle/Eval},
