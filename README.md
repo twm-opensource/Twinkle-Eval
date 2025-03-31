@@ -256,7 +256,7 @@ logging:
 
 [![Teds Lin](https://img.shields.io/badge/GitHub-Teds%20Lin-blue?logo=github)](https://github.com/teds-lin)
 [![Huang Liang Hsun](https://img.shields.io/badge/GitHub-Huang%20Liang%20Hsun-blue?logo=github)](https://github.com/lianghsun)
-[![Min Yi](https://img.shields.io/badge/GitHub-Min%20Yi-blue?logo=github)](https://github.com/cyc00518)
+[![Min Yi Chen](https://img.shields.io/badge/GitHub-Min%20Yi%20Chen-blue?logo=github)](https://github.com/cyc00518)
 [![Dave Sung](https://img.shields.io/badge/GitHub-Dave%20Sung-blue?logo=github)](https://github.com/k1dav)
 
 本專案由 [Twinkle AI](https://github.com/ai-twinkle) 與 [APMIC](https://www.apmic.ai/) 合作開發。
