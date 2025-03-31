@@ -1,3 +1,4 @@
+![Twinkle Eval](assets/logo.png)
 # 🌟 Twinkle Eval：高效且準確的 AI 評測工具
 [![Python](https://img.shields.io/badge/python-≥3.10-blue.svg?logo=python)](https://www.python.org)
 ![Project Status](https://img.shields.io/badge/status-active-brightgreen)
