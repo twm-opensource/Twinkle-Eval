@@ -1,0 +1,32 @@
+llm_api:
+  base_url: "http://your-openai-compatible-server/v1" # API 伺服器網址
+  api_key: "your-api-key"                             # API 金鑰
+  disable_ssl_verify: false                           # 是否停用 SSL 驗證
+  api_rate_limit: 2                                   # 每秒請求限制（-1 為不限制）
+  max_retries: 5                                      # API 呼叫失敗時的重試次數
+  timeout: 600                                        # API 呼叫的超時時間 (秒)
+
+model:
+  name: "model-name"        # 模型名稱
+  temperature: 0.0          # 溫度參數
+  top_p: 0.9                # Top-p 機率閾值
+  max_tokens: 4096          # 最大輸出 token 數
+  frequency_penalty: 0.0    # 頻率懲罰
+  presence_penalty: 0.0     # 存在懲罰
+
+evaluation:
+  dataset_paths:            # 資料集路徑
+    - "datasets/dataset1/"
+    - "datasets/dataset2/"
+  evaluation_method: "box"  # 評測方法（支援 "pattern" 或 "box"）
+  system_prompt: |          # 系統提示詞，僅於 box 評測方法中使用
+    使用者將提供一個題目，並附上選項 A、B、C、D
+    請仔細閱讀題目要求，根據題意選出最符合的選項，並將選項以以下格式輸出：
+    \box{選項}
+    請確保僅將選項包含在 { } 中，否則將不計算為有效答案。
+    務必精確遵循輸出格式，避免任何多餘內容或錯誤格式。
+  repeat_runs: 5           # 單一 datasets 重複執行次數
+  shuffle_options: true    # 是否對選項進行隨機排序
+
+logging:
+  level: "INFO"   # 日誌等級（可選 DEBUG, INFO, WARNING, ERROR）
