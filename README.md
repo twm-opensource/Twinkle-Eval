@@ -99,7 +99,7 @@
    ```bash
    git clone https://github.com/ai-twinkle/Eval.git
    ```
-2. 安裝相依套件：
+2. 安裝相依套件
    ```bash
    pip install -r requirements.txt
    ```
