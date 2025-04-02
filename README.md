@@ -19,6 +19,8 @@
 [![Hugging Face](https://img.shields.io/badge/🤗%20Visit%20Huggingface-twinkle--ai-blue?style=for-the-badge)](https://huggingface.co/twinkle-ai)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Visit%20My%20Profile-blue?logo=linkedin&style=flat)](https://linkedin.com/company/twinkle-ai)
 
+[![Open in Colab](https://img.shields.io/badge/Open%20in-Colab-orange?logo=google-colab&style=for-the-badge)](https://colab.research.google.com/github/LiuYuWei/llm-colab-application/blob/main/Simon_LLM_Application_Twinkle_Eval_Tool_Google_Gemini_Model_Evaluation.ipynb)
+
 本專案為 LLM（Large Language Model）評測框架，採用並行且隨機化測試方法，提供客觀的模型性能分析與穩定性評估，並支援多種常見評測數據集。
 
 ## 目錄
@@ -279,3 +281,5 @@ logging:
 
 ## 致謝
 在本專案的開發過程中，我們參考了 [iKala/ievals](https://github.com/iKala/ievals) 專案中的 pattern 設計方式，對我們的設計方向提供了寶貴的啟發，特此致謝。
+
+感謝 [Simon Liu](https://simonliuyuwei-4ndgcf4.gamma.site/) 提供了 Colab 示範範例，讓我們能更直觀地展示工具的使用方式與應用場景。
