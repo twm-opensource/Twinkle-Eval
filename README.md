@@ -253,7 +253,7 @@ logging:
 | [meta-llama/Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)   | box     | 15.49 (±0.0104) | 25.68 (±0.0200) | 6.90 (±0.0096) | 3       | 隨機    |
 | [meta-llama/Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)   | pattern | 35.85 (±0.0174) | 32.22 (±0.0023) | 59.33 (±0.0168) | 3       | 隨機    |
 | [MediaTek-Research/Llama-Breeze2-3B-Instruct](https://huggingface.co/MediaTek-Research/Llama-Breeze2-3B-Instruct) | pattern | 40.32 (±0.0181) | 38.92 (±0.0193) | 55.37 (±0.0180) | 3       | 隨機    |
-| [twinkle-ai/Llama-3.2-3B-F1-Instruct](https://huggingface.co/twinkle-ai/Llama-3.2-3B-F1-Instruct) | box | 42.18 (±0.0197) | 31.26 (±0.0354) | 52.07 (±0.0189) | 3       | 隨機    |
+| [twinkle-ai/Llama-3.2-3B-F1-Instruct](https://huggingface.co/twinkle-ai/Llama-3.2-3B-F1-Instruct) | box | 46.16 (±0.0198) | 34.92 (±0.0243) | 51.22 (±0.0206) | 3       | 隨機    |
 
 ## 貢獻者
 
