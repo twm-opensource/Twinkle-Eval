@@ -24,7 +24,7 @@
 [![Open in Colab](https://img.shields.io/badge/Open%20in-Colab-orange?logo=google-colab&style=for-the-badge)](https://colab.research.google.com/github/LiuYuWei/llm-colab-application/blob/main/Simon_LLM_Application_Twinkle_Eval_Tool_Google_Gemini_Model_Evaluation.ipynb)
 
 本專案為 LLM（Large Language Model）評測框架，採用並行且隨機化測試方法，提供客觀的模型性能分析與穩定性評估，並支援多種常見評測數據集。
-> 📖 **[Twinkle Eval 可對話式維基百科頁面（由 DeepWiki 生成）](https://deepwiki.tw/ai-twinkle/Eval)**  
+> 📖 **[Twinkle Eval 可對話式維基百科頁面（由 DeepWiki 生成）](https://deepwiki.com/ai-twinkle/Eval)**  
 > 備註：內容由人工智慧生成，準確性無法保證，僅供參考。
 
 ## 目錄
