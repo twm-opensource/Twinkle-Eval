@@ -3,13 +3,19 @@ from logger import log_error
 from openai import OpenAI
 
 
-def call_llm_api(config, question_text):
+def call_llm_api(config, question_text, prompt_lang="zh"):
     """呼叫 LLM API 進行推論"""
 
     # 根據評估方法決定 messages 內容
     if config["evaluation"]["evaluation_method"] == "box":
+        sys_prompt_cfg = config["evaluation"].get("system_prompt", {})
+        if isinstance(sys_prompt_cfg, dict):
+            sys_prompt = sys_prompt_cfg.get(prompt_lang, sys_prompt_cfg.get("zh", ""))
+        else:
+            # 向下相容舊版設定，直接當成字串使用
+            sys_prompt = sys_prompt_cfg
         messages = [
-            {"role": "system", "content": config["evaluation"]["system_prompt"]},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": question_text},
         ]
     else:
