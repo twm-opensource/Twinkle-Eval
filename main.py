@@ -41,8 +41,10 @@ if __name__ == "__main__":
         for f in all_files:
             file_accuracies = []
             file_results = []
+            prompt_map = config["evaluation"].get("datasets_prompt_map", {})
+            dataset_lang = prompt_map.get(dataset_path, "zh")
             for run in range(repeat_runs):
-                result = evaluate_file(config, f, f"{start_time}_run{run}")
+                result = evaluate_file(config, f, f"{start_time}_run{run}", dataset_lang)
                 file_accuracies.append(result[1])
                 file_results.append(result)
 

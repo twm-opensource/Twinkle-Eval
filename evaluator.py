@@ -123,7 +123,7 @@ def shuffle_question_options(question_data):
     return new_data
 
 
-def evaluate_file(config, file_path, timestamp):
+def evaluate_file(config, file_path, timestamp, prompt_lang="zh"):
     """評測單一檔案，並輸出詳細結果"""
     data = read_evaluation_data(file_path)
     method = config["evaluation"]["evaluation_method"]
@@ -165,7 +165,7 @@ def evaluate_file(config, file_path, timestamp):
 
             # 在發送API請求前等待
             rate_limiter.wait()
-            future = executor.submit(call_llm_api, config, question_text)
+            future = executor.submit(call_llm_api, config, question_text, prompt_lang)
             future_tasks.append(future)
             future_to_data[future] = (question_text, correct_answer, idx)
 

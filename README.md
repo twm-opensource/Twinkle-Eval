@@ -163,12 +163,22 @@ evaluation:
     - "datasets/dataset1/"
     - "datasets/dataset2/"
   evaluation_method: "box" # 評測方法（支援 "pattern" 或 "box"）
-  system_prompt: | # 系統提示詞，僅於 box 評測方法中使用
-    使用者將提供一個題目，並附上選項 A、B、C、D
-    請仔細閱讀題目要求，根據題意選出最符合的選項，並將選項以以下格式輸出：
-    \box{選項}
-    請確保僅將選項包含在 { } 中，否則將不計算為有效答案。
-    務必精確遵循輸出格式，避免任何多餘內容或錯誤格式。
+  system_prompt:        # 系統提示詞，僅於 box 評測方法中使用
+    zh: |
+      使用者將提供一個題目，並附上選項 A、B、C、D
+      請仔細閱讀題目要求，根據題意選出最符合的選項，並將選項以以下格式輸出：
+      \box{選項}
+      請確保僅將選項包含在 { } 中，否則將不計算為有效答案。
+      務必精確遵循輸出格式，避免任何多餘內容或錯誤格式。
+    en: |
+      The user will provide a question along with options A, B, C, and D.
+      Please read the question carefully and select the option that best fits the requirements.
+      Output the selected option in the following format:
+      \box{Option}
+      Make sure to include only the option within the curly braces; otherwise, it will not be considered a valid answer.
+      Strictly follow the output format and avoid any extra content or incorrect formatting.
+  datasets_prompt_map:
+    "datasets/mmlu/": "en" # 指定資料集使用英文提示詞
   repeat_runs: 5 # 單一 datasets 重複執行次數
   shuffle_options: true # 是否對選項進行隨機排序
 ```
@@ -225,7 +235,13 @@ logging:
       "dataset_path": "datasets/test/", // 評測資料集目錄
       "api_concurrency": 40, // 並行請求數（影響推論速度）
       "evaluation_method": "box", // 評測方式為 box 模式
-      "system_prompt": "以下使用者會給你選擇 A, B, C, D，請你要選出符合題目要求的答案，並且將答案放至 \\box{} 裡面..." // 指定模型回覆格式的提示語
+      "system_prompt": { // 系統提示詞
+        "zh": "...", // 中文提示詞
+        "en": "..."  // 英文提示詞
+      },
+      "datasets_prompt_map": {
+        "datasets/mmlu/": "en"
+      }
     }
   },
   "logging": {
