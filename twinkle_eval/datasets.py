@@ -1,6 +1,6 @@
 """資料集載入和處理模組
 
-支援多種檔案格式的資料集載入，包括 JSON、JSONL、Parquet、CSV 和 TSV
+支援多種檔案格式的資料集載入，包括 JSON、JSONL、Parquet、Arrow、CSV 和 TSV
 也支援從 HuggingFace Hub 下載資料集
 """
 
@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
+import pyarrow as pa
 from tqdm import tqdm
 
 from datasets import get_dataset_config_names, get_dataset_split_names, load_dataset
@@ -24,6 +25,7 @@ class Dataset:
     - JSON: 單一 JSON 物件
     - JSONL: 每行一個 JSON 物件
     - Parquet: Apache Parquet 格式
+    - Arrow: Apache Arrow 格式
     - CSV/TSV: 逗號或制表符分隔的文字檔
     """
 
@@ -46,8 +48,12 @@ class Dataset:
             elif ext == ".jsonl":
                 with open(self.file_path, "r", encoding="utf-8") as f:
                     data = [json.loads(line) for line in f]
-            elif ext == ".parquet":
-                df = pd.read_parquet(self.file_path)
+            elif ext in [".parquet", ".arrow"]:
+                if ext == ".parquet":
+                    df = pd.read_parquet(self.file_path)
+                else:  # .arrow
+                    table = pa.ipc.open_file(self.file_path).read_all()
+                    df = table.to_pandas()
                 # 驗證必要欄位
                 if "question" not in df.columns:
                     raise ValueError(f"資料格式錯誤，檔案 `{self.file_path}` 缺少 `question` 欄位")
@@ -86,7 +92,7 @@ class Dataset:
 def find_all_evaluation_files(dataset_root: str) -> list:
     """在指定目錄中遞迴搜尋所有支援的評測檔案
 
-    支援的檔案格式包括：.json, .jsonl, .parquet, .csv, .tsv
+    支援的檔案格式包括：.json, .jsonl, .parquet, .arrow, .csv, .tsv
     會自動忽略以點開頭的隱藏目錄
 
     Args:
@@ -98,7 +104,14 @@ def find_all_evaluation_files(dataset_root: str) -> list:
     Raises:
         FileNotFoundError: 當指定目錄中找不到任何支援的檔案時
     """
-    supported_extensions = {".json", ".jsonl", ".parquet", ".csv", ".tsv"}  # 支援的檔案副檔名
+    supported_extensions = {
+        ".json",
+        ".jsonl",
+        ".parquet",
+        ".arrow",
+        ".csv",
+        ".tsv",
+    }  # 支援的檔案副檔名
     all_files = []
 
     print(f"掃描目錄： {dataset_root}")
@@ -107,6 +120,9 @@ def find_all_evaluation_files(dataset_root: str) -> list:
         for file in files:
             file_path = os.path.join(root, file)
             ext = os.path.splitext(file)[-1].lower()
+            if ext == ".lock":
+                continue
+
             if ext in supported_extensions:
                 all_files.append(file_path)
             else:
