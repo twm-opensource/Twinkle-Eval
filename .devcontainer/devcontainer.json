@@ -12,8 +12,8 @@
                 "ms-python.isort",
                 "kevinrose.vsc-python-indent",
                 "aaron-bond.better-comments",
-                "mquandalle.graphql",
-                "streetsidesoftware.code-spell-checker"
+                "streetsidesoftware.code-spell-checker",
+                "ms-python.python"
             ],
             "settings": {
                 "[python]": {
