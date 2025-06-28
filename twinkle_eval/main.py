@@ -15,6 +15,47 @@ from .logger import log_error, log_info
 from .results_exporters import ResultsExporterFactory
 
 
+def convert_json_to_html(json_file_path: str) -> int:
+    """將 JSON 結果檔案轉換為 HTML 格式
+
+    Args:
+        json_file_path: JSON 結果檔案的路徑
+
+    Returns:
+        int: 程式退出代碼（0 表示成功，1 表示失敗）
+    """
+    import json
+    
+    try:
+        # 檢查輸入檔案是否存在
+        if not os.path.exists(json_file_path):
+            print(f"❌ 檔案不存在: {json_file_path}")
+            return 1
+
+        # 載入 JSON 結果
+        with open(json_file_path, "r", encoding="utf-8") as f:
+            results = json.load(f)
+
+        # 建立 HTML 輸出器
+        html_exporter = ResultsExporterFactory.create_exporter("html")
+        
+        # 產生輸出檔案路徑（與輸入檔案同目錄，但副檔名為 .html）
+        output_path = os.path.splitext(json_file_path)[0] + ".html"
+        
+        # 執行轉換
+        exported_file = html_exporter.export(results, output_path)
+        
+        print(f"✅ 成功轉換為 HTML: {exported_file}")
+        return 0
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON 檔案格式錯誤: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ 轉換過程中發生錯誤: {e}")
+        return 1
+
+
 def create_default_config(output_path: str = "config.yaml") -> int:
     """創建預設配置檔案
 
@@ -302,6 +343,9 @@ def create_cli_parser() -> argparse.ArgumentParser:
   twinkle-eval --list-llms             # 列出可用的 LLM 類型
   twinkle-eval --list-strategies       # 列出可用的評測策略
 
+結果格式轉換:
+  twinkle-eval --convert-to-html results_20240101_1200.json  # 將 JSON 結果轉換為 HTML
+
 HuggingFace 資料集下載:
   twinkle-eval --download-dataset cais/mmlu          # 下載 MMLU 所有子集
   twinkle-eval --download-dataset cais/mmlu --dataset-subset anatomy  # 下載特定子集
@@ -363,6 +407,12 @@ HuggingFace 資料集下載:
         "--dataset-info",
         metavar="DATASET_NAME",
         help="獲取 HuggingFace 資料集資訊",
+    )
+
+    parser.add_argument(
+        "--convert-to-html",
+        metavar="JSON_FILE",
+        help="將 JSON 結果檔案轉換為 HTML 格式",
     )
 
     return parser
@@ -446,6 +496,14 @@ def main() -> int:
             return 0
         except Exception as e:
             print(f"❌ 獲取資料集資訊失敗: {e}")
+            return 1
+
+    # JSON 轉 HTML 命令
+    if args.convert_to_html:
+        try:
+            return convert_json_to_html(args.convert_to_html)
+        except Exception as e:
+            print(f"❌ 轉換失敗: {e}")
             return 1
 
     # 執行評測

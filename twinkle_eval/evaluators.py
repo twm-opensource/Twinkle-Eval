@@ -134,7 +134,7 @@ class Evaluator:
 
             accuracy = total_correct / total_questions if total_questions else 0
 
-        results_dir = "results/details"
+        results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
         results_path = os.path.join(results_dir, f"eval_results_{timestamp}.json")
 

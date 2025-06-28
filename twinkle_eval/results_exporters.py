@@ -35,10 +35,44 @@ class JSONExporter(ResultsExporter):
         if not output_path.endswith(self.get_file_extension()):
             output_path += self.get_file_extension()
 
+        # Ensure environment config is included
+        enhanced_results = self._enhance_with_environment(results)
+
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
+            json.dump(enhanced_results, f, indent=4, ensure_ascii=False)
 
         return output_path
+
+    def _enhance_with_environment(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure environment config is included in results."""
+        enhanced = results.copy()
+        
+        # Check if config and environment already exist
+        if "config" not in enhanced:
+            enhanced["config"] = {}
+        
+        if "environment" not in enhanced["config"]:
+            enhanced["config"]["environment"] = {
+                "gpu_info": {
+                    "model": "N/A",
+                    "count": "N/A",
+                    "memory_gb": "N/A",
+                    "cuda_version": "N/A",
+                    "driver_version": "N/A"
+                },
+                "parallel_config": {
+                    "tp_size": "N/A",
+                    "pp_size": "N/A"
+                },
+                "system_info": {
+                    "framework": "N/A",
+                    "python_version": "N/A",
+                    "torch_version": "N/A",
+                    "node_count": "N/A"
+                }
+            }
+        
+        return enhanced
 
 
 class CSVExporter(ResultsExporter):
@@ -70,7 +104,7 @@ class CSVExporter(ResultsExporter):
         timestamp = results.get("timestamp", "")
         config = results.get("config", {})
         environment = config.get("environment", {})
-        
+
         base_info = {
             "timestamp": timestamp,
             "config_model_name": config.get("model", {}).get("name", ""),
@@ -138,7 +172,7 @@ class ExcelExporter(ResultsExporter):
     def _create_summary_data(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Create summary data for Excel export."""
         summary = []
-        
+
         config = results.get("config", {})
         environment = config.get("environment", {})
 
@@ -198,14 +232,302 @@ class HTMLExporter(ResultsExporter):
 
     def _generate_html(self, results: Dict[str, Any]) -> str:
         """Generate HTML content from results."""
+        # Ensure environment config is included
+        enhanced_results = self._enhance_with_environment(results)
+        
+        return self._generate_summary_html(enhanced_results)
+
+    def _enhance_with_environment(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure environment config is included in results."""
+        enhanced = results.copy()
+        
+        # Check if config and environment already exist
+        if "config" not in enhanced:
+            enhanced["config"] = {}
+        
+        if "environment" not in enhanced["config"]:
+            enhanced["config"]["environment"] = {
+                "gpu_info": {
+                    "model": "N/A",
+                    "count": "N/A",
+                    "memory_gb": "N/A",
+                    "cuda_version": "N/A",
+                    "driver_version": "N/A"
+                },
+                "parallel_config": {
+                    "tp_size": "N/A",
+                    "pp_size": "N/A"
+                },
+                "system_info": {
+                    "framework": "N/A",
+                    "python_version": "N/A",
+                    "torch_version": "N/A",
+                    "node_count": "N/A"
+                }
+            }
+        
+        return enhanced
+
+    def _generate_summary_html(self, results: Dict[str, Any]) -> str:
+        """Generate HTML content for summary and detailed results."""
         timestamp = results.get("timestamp", "")
         config = results.get("config", {})
         environment = config.get("environment", {})
         gpu_info = environment.get("gpu_info", {})
         parallel_config = environment.get("parallel_config", {})
         system_info = environment.get("system_info", {})
+        
+        # Check if this is detailed result
+        if "details" in results or "file" in results:
+            # Handle detailed result display
+            title = "Twinkle Eval 詳細結果"
+            file_path = results.get("file", "")
+            accuracy = results.get("accuracy", 0)
+            details = results.get("details", [])
+            
+            html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{title} - {timestamp}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f8f9fa; }}
+        .header {{ background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+        .environment {{ background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }}
+        .env-header {{ cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 10px; }}
+        .env-header:hover {{ background-color: #dee2e6; }}
+        .env-content {{ display: none; }}
+        .env-content.show {{ display: block; }}
+        .env-section {{ margin: 10px 0; }}
+        .collapse-icon {{ transition: transform 0.3s ease; }}
+        .collapse-icon.rotated {{ transform: rotate(180deg); }}
+        .file-info {{ background-color: #e8f4f8; padding: 20px; border-radius: 10px; margin: 20px 0; }}
+        .accuracy {{ color: #2e7d32; font-weight: bold; font-size: 1.2em; }}
+        .question-item {{ background-color: #ffffff; margin: 15px 0; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #007bff; }}
+        .question-item.correct {{ border-left-color: #28a745; }}
+        .question-item.incorrect {{ border-left-color: #dc3545; }}
+        .question-text {{ font-weight: bold; margin-bottom: 15px; line-height: 1.6; }}
+        .answer-section {{ margin: 10px 0; }}
+        .correct-answer {{ color: #28a745; font-weight: bold; }}
+        .predicted-answer {{ color: #007bff; font-weight: bold; }}
+        .incorrect-answer {{ color: #dc3545; font-weight: bold; }}
+        .llm-output {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; line-height: 1.4; }}
+        .reasoning {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; line-height: 1.4; }}
+        .usage-info {{ font-size: 0.9em; color: #6c757d; margin-top: 10px; }}
+        .status-badge {{ padding: 5px 10px; border-radius: 15px; color: white; font-size: 0.9em; font-weight: bold; }}
+        .correct-badge {{ background-color: #28a745; }}
+        .incorrect-badge {{ background-color: #dc3545; }}
+        .summary-stats {{ display: flex; gap: 20px; margin: 20px 0; }}
+        .stat-item {{ background-color: #ffffff; padding: 15px; border-radius: 10px; flex: 1; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+        .stat-number {{ font-size: 2em; font-weight: bold; color: #007bff; }}
+        .stat-label {{ color: #6c757d; margin-top: 5px; }}
+        
+        /* Tab styles */
+        .tabs {{ margin: 20px 0; }}
+        .tab-buttons {{ display: flex; background-color: #f8f9fa; border-radius: 10px 10px 0 0; border: 1px solid #ddd; border-bottom: none; }}
+        .tab-button {{ flex: 1; padding: 15px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s ease; }}
+        .tab-button.active {{ background-color: #ffffff; color: #007bff; }}
+        .tab-button.correct.active {{ color: #28a745; }}
+        .tab-button.incorrect.active {{ color: #dc3545; }}
+        .tab-content {{ display: none; background-color: #ffffff; border: 1px solid #ddd; border-radius: 0 0 10px 10px; padding: 20px; }}
+        .tab-content.active {{ display: block; }}
+    </style>
+    <script>
+        function toggleEnvironment() {{
+            const content = document.querySelector('.env-content');
+            const icon = document.querySelector('.collapse-icon');
+            content.classList.toggle('show');
+            icon.classList.toggle('rotated');
+        }}
+        
+        function showTab(tabName) {{
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {{
+                content.classList.remove('active');
+            }});
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {{
+                button.classList.remove('active');
+            }});
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to clicked button
+            document.querySelector(`[onclick="showTab('${{tabName}}')"]`).classList.add('active');
+        }}
+        
+        window.onload = function() {{
+            // Show first tab by default
+            showTab('correct');
+        }}
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1>🌟 {title}</h1>
+        <p><strong>時間戳記：</strong> {timestamp}</p>
+        <p><strong>檔案：</strong> {file_path}</p>
+        <p><strong>總體準確率：</strong> <span class="accuracy">{accuracy:.2%}</span></p>
+        <p><strong>Model:</strong> {config.get("model", {}).get("name", "N/A")}</p>
+        <p><strong>Temperature:</strong> {config.get("model", {}).get("temperature", "N/A")}</p>
+    </div>
+    
+    <div class="environment">
+        <div class="env-header" onclick="toggleEnvironment()">
+            <h2>🖥️ Environment Information</h2>
+            <span class="collapse-icon">▼</span>
+        </div>
+        <div class="env-content">
+            <div class="env-section">
+                <h3>GPU Configuration</h3>
+                <p><strong>Model:</strong> {gpu_info.get("model", "N/A")}</p>
+                <p><strong>Count:</strong> {gpu_info.get("count", "N/A")}</p>
+                <p><strong>Memory:</strong> {gpu_info.get("memory_gb", "N/A")} GB</p>
+                <p><strong>CUDA Version:</strong> {gpu_info.get("cuda_version", "N/A")}</p>
+                <p><strong>Driver Version:</strong> {gpu_info.get("driver_version", "N/A")}</p>
+            </div>
+            <div class="env-section">
+                <h3>Parallel Configuration</h3>
+                <p><strong>TP Size:</strong> {parallel_config.get("tp_size", "N/A")}</p>
+                <p><strong>PP Size:</strong> {parallel_config.get("pp_size", "N/A")}</p>
+            </div>
+            <div class="env-section">
+                <h3>System Information</h3>
+                <p><strong>Framework:</strong> {system_info.get("framework", "N/A")}</p>
+                <p><strong>Python Version:</strong> {system_info.get("python_version", "N/A")}</p>
+                <p><strong>PyTorch Version:</strong> {system_info.get("torch_version", "N/A")}</p>
+                <p><strong>Node Count:</strong> {system_info.get("node_count", "N/A")}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="summary-stats">
+        <div class="stat-item">
+            <div class="stat-number">{len(details)}</div>
+            <div class="stat-label">總題數</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" style="color: #28a745;">{sum(1 for d in details if d.get('is_correct', False))}</div>
+            <div class="stat-label">正確題數</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" style="color: #dc3545;">{sum(1 for d in details if not d.get('is_correct', False))}</div>
+            <div class="stat-label">錯誤題數</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" style="color: #007bff;">{sum(d.get('usage_total_tokens', 0) for d in details):,}</div>
+            <div class="stat-label">總 Token 使用量</div>
+        </div>
+    </div>
+"""
+            
+            # Add tabbed questions
+            correct_details = [d for d in details if d.get('is_correct', False)]
+            incorrect_details = [d for d in details if not d.get('is_correct', False)]
+            
+            html += f"""
+    <div class="tabs">
+        <div class="tab-buttons">
+            <button class="tab-button correct" onclick="showTab('correct')">✓ 正確答題 ({len(correct_details)})</button>
+            <button class="tab-button incorrect" onclick="showTab('incorrect')">✗ 錯誤答題 ({len(incorrect_details)})</button>
+        </div>
+        
+        <div id="correct-tab" class="tab-content">
+"""
+            
+            for i, detail in enumerate(correct_details, 1):
+                question_id = detail.get("question_id", i)
+                question = detail.get("question", "")
+                correct_answer = detail.get("correct_answer", "")
+                predicted_answer = detail.get("predicted_answer", "")
+                llm_output = detail.get("llm_output", "")
+                reasoning = detail.get("llm_resoning_output", "")
+                usage_completion = detail.get("usage_completion_tokens", 0)
+                usage_prompt = detail.get("usage_prompt_tokens", 0)
+                usage_total = detail.get("usage_total_tokens", 0)
 
-        html = f"""
+                html += f"""
+            <div class="question-item correct">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>第 {question_id} 題</h3>
+                    <span class="status-badge correct-badge">✓ 正確</span>
+                </div>
+                
+                <div class="question-text">{question}</div>
+                
+                <div class="answer-section">
+                    <p><strong>正確答案：</strong> <span class="correct-answer">{correct_answer}</span></p>
+                    <p><strong>預測答案：</strong> <span class="correct-answer">{predicted_answer}</span></p>
+                </div>
+                
+                <div class="llm-output">
+                    <strong>LLM 輸出：</strong>
+                    {llm_output}
+                </div>
+                
+                {f'<div class="reasoning"><strong>推理過程：</strong>{reasoning}</div>' if reasoning else ''}
+                
+                <div class="usage-info">
+                    <strong>Token 使用量：</strong> 
+                    提示 {usage_prompt:,} | 完成 {usage_completion:,} | 總計 {usage_total:,}
+                </div>
+            </div>
+"""
+            
+            html += """
+        </div>
+        
+        <div id="incorrect-tab" class="tab-content">
+"""
+            
+            for i, detail in enumerate(incorrect_details, 1):
+                question_id = detail.get("question_id", i)
+                question = detail.get("question", "")
+                correct_answer = detail.get("correct_answer", "")
+                predicted_answer = detail.get("predicted_answer", "")
+                llm_output = detail.get("llm_output", "")
+                reasoning = detail.get("llm_resoning_output", "")
+                usage_completion = detail.get("usage_completion_tokens", 0)
+                usage_prompt = detail.get("usage_prompt_tokens", 0)
+                usage_total = detail.get("usage_total_tokens", 0)
+
+                html += f"""
+            <div class="question-item incorrect">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>第 {question_id} 題</h3>
+                    <span class="status-badge incorrect-badge">✗ 錯誤</span>
+                </div>
+                
+                <div class="question-text">{question}</div>
+                
+                <div class="answer-section">
+                    <p><strong>正確答案：</strong> <span class="correct-answer">{correct_answer}</span></p>
+                    <p><strong>預測答案：</strong> <span class="incorrect-answer">{predicted_answer}</span></p>
+                </div>
+                
+                <div class="llm-output">
+                    <strong>LLM 輸出：</strong>
+                    {llm_output}
+                </div>
+                
+                {f'<div class="reasoning"><strong>推理過程：</strong>{reasoning}</div>' if reasoning else ''}
+                
+                <div class="usage-info">
+                    <strong>Token 使用量：</strong> 
+                    提示 {usage_prompt:,} | 完成 {usage_completion:,} | 總計 {usage_total:,}
+                </div>
+            </div>
+"""
+            
+            html += """
+        </div>
+    </div>
+"""
+        else:
+            # Handle summary result display
+            html = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -213,8 +535,14 @@ class HTMLExporter(ResultsExporter):
     <style>
         body {{ font-family: Arial, sans-serif; margin: 40px; }}
         .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
-        .environment {{ background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+        .environment {{ background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }}
+        .env-header {{ cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 10px; }}
+        .env-header:hover {{ background-color: #dee2e6; }}
+        .env-content {{ display: none; }}
+        .env-content.show {{ display: block; }}
         .env-section {{ margin: 10px 0; }}
+        .collapse-icon {{ transition: transform 0.3s ease; }}
+        .collapse-icon.rotated {{ transform: rotate(180deg); }}
         .dataset {{ margin: 20px 0; border: 1px solid #ddd; border-radius: 5px; }}
         .dataset-header {{ background-color: #e8f4f8; padding: 15px; }}
         .results-table {{ width: 100%; border-collapse: collapse; }}
@@ -222,6 +550,14 @@ class HTMLExporter(ResultsExporter):
         .results-table th {{ background-color: #f2f2f2; }}
         .accuracy {{ color: #2e7d32; font-weight: bold; }}
     </style>
+    <script>
+        function toggleEnvironment() {{
+            const content = document.querySelector('.env-content');
+            const icon = document.querySelector('.collapse-icon');
+            content.classList.toggle('show');
+            icon.classList.toggle('rotated');
+        }}
+    </script>
 </head>
 <body>
     <div class="header">
@@ -232,31 +568,38 @@ class HTMLExporter(ResultsExporter):
     </div>
     
     <div class="environment">
-        <h2>🖥️ Environment Information</h2>
-        <div class="env-section">
-            <h3>GPU Configuration</h3>
-            <p><strong>Model:</strong> {gpu_info.get("model", "N/A")}</p>
-            <p><strong>Count:</strong> {gpu_info.get("count", "N/A")}</p>
-            <p><strong>Memory:</strong> {gpu_info.get("memory_gb", "N/A")} GB</p>
-            <p><strong>CUDA Version:</strong> {gpu_info.get("cuda_version", "N/A")}</p>
+        <div class="env-header" onclick="toggleEnvironment()">
+            <h2>🖥️ Environment Information</h2>
+            <span class="collapse-icon">▼</span>
         </div>
-        <div class="env-section">
-            <h3>Parallel Configuration</h3>
-            <p><strong>TP Size:</strong> {parallel_config.get("tp_size", "N/A")}</p>
-            <p><strong>PP Size:</strong> {parallel_config.get("pp_size", "N/A")}</p>
-        </div>
-        <div class="env-section">
-            <h3>System Information</h3>
-            <p><strong>Framework:</strong> {system_info.get("framework", "N/A")}</p>
-            <p><strong>Python Version:</strong> {system_info.get("python_version", "N/A")}</p>
-            <p><strong>PyTorch Version:</strong> {system_info.get("torch_version", "N/A")}</p>
-            <p><strong>Node Count:</strong> {system_info.get("node_count", "N/A")}</p>
+        <div class="env-content">
+            <div class="env-section">
+                <h3>GPU Configuration</h3>
+                <p><strong>Model:</strong> {gpu_info.get("model", "N/A")}</p>
+                <p><strong>Count:</strong> {gpu_info.get("count", "N/A")}</p>
+                <p><strong>Memory:</strong> {gpu_info.get("memory_gb", "N/A")} GB</p>
+                <p><strong>CUDA Version:</strong> {gpu_info.get("cuda_version", "N/A")}</p>
+                <p><strong>Driver Version:</strong> {gpu_info.get("driver_version", "N/A")}</p>
+            </div>
+            <div class="env-section">
+                <h3>Parallel Configuration</h3>
+                <p><strong>TP Size:</strong> {parallel_config.get("tp_size", "N/A")}</p>
+                <p><strong>PP Size:</strong> {parallel_config.get("pp_size", "N/A")}</p>
+            </div>
+            <div class="env-section">
+                <h3>System Information</h3>
+                <p><strong>Framework:</strong> {system_info.get("framework", "N/A")}</p>
+                <p><strong>Python Version:</strong> {system_info.get("python_version", "N/A")}</p>
+                <p><strong>PyTorch Version:</strong> {system_info.get("torch_version", "N/A")}</p>
+                <p><strong>Node Count:</strong> {system_info.get("node_count", "N/A")}</p>
+            </div>
         </div>
     </div>
 """
 
-        for dataset_path, dataset_data in results.get("dataset_results", {}).items():
-            html += f"""
+            # Add dataset results for summary
+            for dataset_path, dataset_data in results.get("dataset_results", {}).items():
+                html += f"""
     <div class="dataset">
         <div class="dataset-header">
             <h2>📊 Dataset: {dataset_path}</h2>
@@ -271,8 +614,8 @@ class HTMLExporter(ResultsExporter):
             </tr>
 """
 
-            for file_result in dataset_data.get("results", []):
-                html += f"""
+                for file_result in dataset_data.get("results", []):
+                    html += f"""
             <tr>
                 <td>{file_result.get("file", "")}</td>
                 <td class="accuracy">{file_result.get("accuracy_mean", 0):.2%}</td>
@@ -280,7 +623,7 @@ class HTMLExporter(ResultsExporter):
             </tr>
 """
 
-            html += """
+                html += """
         </table>
     </div>
 """
