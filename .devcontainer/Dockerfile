@@ -1,4 +1,4 @@
-FROM python:3.11.13-bookworm
+FROM harbor.apmic.ai/library/python311
 
 # install uv, but not use by default
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \

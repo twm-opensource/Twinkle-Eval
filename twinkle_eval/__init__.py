@@ -23,9 +23,8 @@
 授權：MIT License
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Twinkle AI Team"
-__email__ = "contact@twinkle.ai"
 __license__ = "MIT"
 
 from .config import ConfigurationManager, load_config

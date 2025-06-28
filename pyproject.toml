@@ -4,18 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "twinkle-eval"
-version = "1.0.0"
+version = "1.1.0"
 description = "🌟 高效且準確的 AI 模型評測工具"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Teds Lin", email = "teds@twinkle.ai"},
-    {name = "Liang Hsun Huang", email = "lianghsun@twinkle.ai"},
-    {name = "Min Yi Chen", email = "minyi@twinkle.ai"},
-    {name = "Dave Sung", email = "dave@ap-mic.com"},
+    {name = "Teds Lin", email = "tedslin@gmail.com"},
+    {name = "Liang Hsun Huang", email = "lianghsunh@gmail.com"},
+    {name = "Min Yi Chen", email = "cyc00518@icloud.com"},
+    {name = "Dave Sung", email = "code@k1dav.fun"},
 ]
 maintainers = [
-    {name = "Twinkle AI Team", email = "contact@twinkle.ai"},
+    {name = "Teds Lin", email = "tedslin@gmail.com"},
+    {name = "Liang Hsun Huang", email = "lianghsunh@gmail.com"},
+    {name = "Min Yi Chen", email = "cyc00518@icloud.com"},
+    {name = "Dave Sung", email = "code@k1dav.fun"},
 ]
 keywords = [
     "ai", "llm", "evaluation", "benchmark", "machine-learning", 
