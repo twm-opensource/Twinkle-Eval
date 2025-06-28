@@ -1,14 +1,20 @@
 """資料集載入和處理模組
 
 支援多種檔案格式的資料集載入，包括 JSON、JSONL、Parquet、CSV 和 TSV
+也支援從 HuggingFace Hub 下載資料集
 """
 
 import json
 import os
+from pathlib import Path
+from typing import Dict, Optional
 
 import pandas as pd
+from tqdm import tqdm
 
-from .logger import log_error, log_info
+from datasets import get_dataset_config_names, get_dataset_split_names, load_dataset
+
+from .logger import log_error, log_info, log_warning
 
 
 class Dataset:
@@ -110,3 +116,132 @@ def find_all_evaluation_files(dataset_root: str) -> list:
     log_info(f"評測集資料夾： {dataset_root}")
     log_info(f"發現 {len(all_files)} 個評測檔案")
     return all_files
+
+
+def download_huggingface_dataset(
+    dataset_name: str,
+    subset: Optional[str] = None,
+    split: str = "test",
+    output_dir: str = "datasets",
+) -> str:
+    """從 HuggingFace Hub 下載資料集
+
+    Args:
+        dataset_name: HuggingFace 資料集名稱 (例如: "cais/mmlu")
+        subset: 資料集子集名稱 (可選，如果為 None 則下載所有子集)
+        split: 要下載的資料集分割 (預設: "test")
+        output_dir: 輸出目錄 (預設: "datasets")
+
+    Returns:
+        str: 下載後的目錄路徑
+
+    Raises:
+        ImportError: 未安裝 datasets 套件
+        Exception: 下載失敗
+    """
+    # 建立輸出目錄
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # 如果沒有指定子集，下載所有子集
+    if subset is None:
+        log_info(f"開始下載 HuggingFace 資料集的所有子集: {dataset_name}")
+        try:
+            configs = get_dataset_config_names(dataset_name)
+            downloaded_count = 0
+
+            # 使用進度條顯示下載進度
+            with tqdm(configs, desc="下載子集", unit="subset") as pbar:
+                for config in pbar:
+                    try:
+                        pbar.set_postfix({"目前": config})
+                        log_info(f"下載子集: {config}")
+                        _download_single_subset(dataset_name, config, split, output_dir)
+                        downloaded_count += 1
+                    except Exception as e:
+                        log_warning(f"跳過子集 {config}: {e}")
+                        continue
+
+            if downloaded_count > 0:
+                log_info(f"成功下載 {downloaded_count} 個子集")
+                return output_dir
+            else:
+                raise Exception("沒有成功下載任何子集")
+
+        except Exception as e:
+            log_error(f"下載所有子集失敗: {e}")
+            raise e
+    else:
+        # 下載指定子集
+        log_info(f"開始下載 HuggingFace 資料集: {dataset_name}, 子集: {subset}")
+        _download_single_subset(dataset_name, subset, split, output_dir)
+        return output_dir
+
+
+def _download_single_subset(
+    dataset_name: str,
+    subset: str,
+    split: str,
+    output_dir: Optional[str] = None,
+) -> None:
+    """下載單一子集的輔助函數，使用 HuggingFace 原始快取格式"""
+    try:
+        # 直接下載資料集到 HuggingFace 快取目錄
+        load_dataset(
+            dataset_name,
+            name=subset,
+            split=split,
+            cache_dir=output_dir,
+            trust_remote_code=False,
+        )
+
+    except Exception as e:
+        log_error(f"下載子集 {subset} 失敗: {e}")
+        raise e
+
+
+def list_huggingface_dataset_info(dataset_name: str, subset: Optional[str] = None) -> Dict:
+    """獲取 HuggingFace 資料集資訊
+
+    Args:
+        dataset_name: HuggingFace 資料集名稱
+        subset: 資料集子集名稱 (可選)
+
+    Returns:
+        dict: 資料集資訊，包含可用的分割、特徵等
+
+    Raises:
+        ImportError: 未安裝 datasets 套件
+        Exception: 獲取資訊失敗
+    """
+    try:
+        # 獲取資料集配置
+        configs = get_dataset_config_names(dataset_name)
+
+        info = {
+            "dataset_name": dataset_name,
+            "configs": configs,
+            "splits": {},
+        }
+
+        # 如果指定了子集，只獲取該子集的資訊
+        if subset:
+            if subset in configs:
+                splits = get_dataset_split_names(dataset_name, config_name=subset)
+                info["splits"][subset] = splits
+            else:
+                log_warning(f"子集 '{subset}' 不存在於資料集 '{dataset_name}' 中")
+        else:
+            # 獲取所有配置的分割資訊
+            for config in configs[:5]:  # 限制前5個配置以避免過多請求
+                try:
+                    splits = get_dataset_split_names(dataset_name, config_name=config)
+                    info["splits"][config] = splits
+                except Exception as e:
+                    log_warning(f"無法獲取配置 '{config}' 的分割資訊: {e}")
+
+        return info
+
+    except Exception as e:
+        log_error(f"獲取 HuggingFace 資料集資訊失敗: {e}")
+        raise e

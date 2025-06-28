@@ -301,6 +301,11 @@ def create_cli_parser() -> argparse.ArgumentParser:
   twinkle-eval --export json csv html  # 輸出為多種格式
   twinkle-eval --list-llms             # 列出可用的 LLM 類型
   twinkle-eval --list-strategies       # 列出可用的評測策略
+
+HuggingFace 資料集下載:
+  twinkle-eval --download-dataset cais/mmlu          # 下載 MMLU 所有子集
+  twinkle-eval --download-dataset cais/mmlu --dataset-subset anatomy  # 下載特定子集
+  twinkle-eval --dataset-info cais/mmlu             # 查看資料集資訊
         """,
     )
 
@@ -326,6 +331,39 @@ def create_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="store_true", help="顯示版本資訊")
 
     parser.add_argument("--init", action="store_true", help="創建預設配置檔案")
+
+    # HuggingFace 資料集下載相關命令
+    parser.add_argument(
+        "--download-dataset",
+        metavar="DATASET_NAME",
+        help="從 HuggingFace Hub 下載資料集 (例如: cais/mmlu)",
+    )
+
+    parser.add_argument(
+        "--dataset-subset",
+        metavar="SUBSET",
+        help="指定資料集子集名稱 (與 --download-dataset 一起使用)",
+    )
+
+    parser.add_argument(
+        "--dataset-split",
+        metavar="SPLIT",
+        default="test",
+        help="指定資料集分割 (預設: test)",
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        metavar="DIR",
+        default="datasets",
+        help="資料集下載輸出目錄 (預設: datasets)",
+    )
+
+    parser.add_argument(
+        "--dataset-info",
+        metavar="DATASET_NAME",
+        help="獲取 HuggingFace 資料集資訊",
+    )
 
     return parser
 
@@ -376,6 +414,39 @@ def main() -> int:
 
     if args.init:
         return create_default_config()
+
+    # HuggingFace 資料集相關命令
+    if args.download_dataset:
+        try:
+            from .datasets import download_huggingface_dataset
+
+            download_huggingface_dataset(
+                dataset_name=args.download_dataset,
+                subset=args.dataset_subset,
+                split=args.dataset_split,
+                output_dir=args.output_dir,
+            )
+            print(f"✅ 資料集下載完成，已快取到 HuggingFace 目錄")
+            return 0
+        except Exception as e:
+            print(f"❌ 下載資料集失敗: {e}")
+            return 1
+
+    if args.dataset_info:
+        try:
+            from .datasets import list_huggingface_dataset_info
+
+            info = list_huggingface_dataset_info(
+                dataset_name=args.dataset_info, subset=args.dataset_subset
+            )
+            print(f"📊 資料集資訊: {info['dataset_name']}")
+            print(f"可用配置: {', '.join(info['configs'])}")
+            for config, splits in info["splits"].items():
+                print(f"  {config}: {', '.join(splits)}")
+            return 0
+        except Exception as e:
+            print(f"❌ 獲取資料集資訊失敗: {e}")
+            return 1
 
     # 執行評測
     try:
