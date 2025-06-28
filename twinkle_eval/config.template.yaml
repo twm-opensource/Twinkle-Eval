@@ -13,6 +13,7 @@ model:
   max_tokens: 4096          # 最大輸出 token 數
   frequency_penalty: 0.0    # 頻率懲罰
   presence_penalty: 0.0     # 存在懲罰
+  extra_body:
 
 evaluation:
   dataset_paths:            # 資料集路徑

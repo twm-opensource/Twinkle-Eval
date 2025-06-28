@@ -72,7 +72,7 @@ class Evaluator:
             future_tasks = []
             future_to_data = {}
 
-            for idx, q in enumerate(tqdm(dataset, desc="評測題庫中")):
+            for idx, q in enumerate(tqdm(dataset, desc="處理題庫中")):
                 if shuffle_enabled:
                     q = self.shuffle_question_options(q)
 
@@ -98,9 +98,15 @@ class Evaluator:
             for future in tqdm(
                 as_completed(future_tasks), total=len(future_tasks), desc="處理回應中"
             ):
-                llm_output = future.result()
+                llm_chat_completion = future.result()
+
+                message = llm_chat_completion.choices[0].message
+                usage = llm_chat_completion.usage
+                content = message.content
+                reasoning_content = message.reasoning_content
+
                 question_text, correct_answer, question_id = future_to_data[future]
-                predicted_answer = self.evaluation_strategy.extract_answer(llm_output)
+                predicted_answer = self.evaluation_strategy.extract_answer(content)
 
                 is_correct = (
                     False
@@ -116,9 +122,13 @@ class Evaluator:
                         "question_id": question_id,
                         "question": question_text,
                         "correct_answer": correct_answer,
-                        "llm_output": llm_output,
+                        "llm_output": content,
+                        "llm_resoning_output": reasoning_content,
                         "predicted_answer": predicted_answer,
                         "is_correct": is_correct,
+                        "usage_completion_tokens": usage.completion_tokens,
+                        "usage_prompt_tokens": usage.prompt_tokens,
+                        "usage_total_tokens": usage.total_tokens,
                     }
                 )
 
@@ -126,7 +136,7 @@ class Evaluator:
 
         results_dir = "results/details"
         os.makedirs(results_dir, exist_ok=True)
-        results_path = os.path.join(results_dir, f"eval_results_{timestamp}.jsonl")
+        results_path = os.path.join(results_dir, f"eval_results_{timestamp}.json")
 
         result_data = {
             "timestamp": timestamp,

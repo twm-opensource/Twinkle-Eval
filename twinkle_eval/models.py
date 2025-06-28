@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Type
 
 import httpx
 from openai import OpenAI
+from openai.types.chat import ChatCompletion
 
 from .logger import log_error
 
@@ -14,7 +15,7 @@ class LLM(ABC):
         self.config = config
 
     @abstractmethod
-    def call(self, question_text: str, prompt_lang: str = "zh") -> Optional[str]:
+    def call(self, question_text: str, prompt_lang: str = "zh") -> ChatCompletion:
         """Call the LLM with a question and return the response."""
         pass
 
@@ -75,7 +76,7 @@ class OpenAIModel(LLM):
         else:
             return [{"role": "user", "content": question_text}]
 
-    def call(self, question_text: str, prompt_lang: str = "zh") -> Optional[str]:
+    def call(self, question_text: str, prompt_lang: str = "zh") -> ChatCompletion:
         """Call the OpenAI API with the given question."""
         messages = self._build_messages(question_text, prompt_lang)
         model_config = self.config["model"]
@@ -94,9 +95,12 @@ class OpenAIModel(LLM):
             if param in model_config:
                 payload[param] = model_config[param]
 
+        if model_config["extra_body"]:
+            payload["extra_body"] = model_config["extra_body"]
+
         try:
             response = self.client.chat.completions.create(**payload)
-            return response.choices[0].message.content
+            return response
         except Exception as e:
             log_error(f"LLM API 錯誤: {e}")
             raise e

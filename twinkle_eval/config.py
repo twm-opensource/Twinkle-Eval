@@ -88,6 +88,7 @@ class ConfigurationManager:
             "max_tokens": 4096,  # 最大輸出 token 數
             "frequency_penalty": 0.0,  # 頻率懲罰（-2.0-2.0）
             "presence_penalty": 0.0,  # 存在懲罰（-2.0-2.0）
+            "extra_body": {},  # 額外參數
         }
         for key, value in model_defaults.items():
             if key not in self.config["model"]:
