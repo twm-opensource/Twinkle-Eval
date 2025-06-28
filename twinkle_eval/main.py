@@ -25,7 +25,7 @@ def convert_json_to_html(json_file_path: str) -> int:
         int: 程式退出代碼（0 表示成功，1 表示失敗）
     """
     import json
-    
+
     try:
         # 檢查輸入檔案是否存在
         if not os.path.exists(json_file_path):
@@ -38,16 +38,16 @@ def convert_json_to_html(json_file_path: str) -> int:
 
         # 建立 HTML 輸出器
         html_exporter = ResultsExporterFactory.create_exporter("html")
-        
+
         # 產生輸出檔案路徑（與輸入檔案同目錄，但副檔名為 .html）
         output_path = os.path.splitext(json_file_path)[0] + ".html"
-        
+
         # 執行轉換
         exported_file = html_exporter.export(results, output_path)
-        
+
         print(f"✅ 成功轉換為 HTML: {exported_file}")
         return 0
-        
+
     except json.JSONDecodeError as e:
         print(f"❌ JSON 檔案格式錯誤: {e}")
         return 1
@@ -512,6 +512,7 @@ def main() -> int:
         runner.initialize()
         runner.run_evaluation(args.export)
     except Exception as e:
+        print(e)
         log_error(f"執行失敗: {e}")
         return 1
 
