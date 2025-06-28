@@ -68,10 +68,20 @@ class CSVExporter(ResultsExporter):
         flattened = []
 
         timestamp = results.get("timestamp", "")
+        config = results.get("config", {})
+        environment = config.get("environment", {})
+        
         base_info = {
             "timestamp": timestamp,
-            "config_model_name": results.get("config", {}).get("model", {}).get("name", ""),
-            "config_temperature": results.get("config", {}).get("model", {}).get("temperature", ""),
+            "config_model_name": config.get("model", {}).get("name", ""),
+            "config_temperature": config.get("model", {}).get("temperature", ""),
+            "gpu_model": environment.get("gpu_info", {}).get("model", ""),
+            "gpu_count": environment.get("gpu_info", {}).get("count", ""),
+            "gpu_memory_gb": environment.get("gpu_info", {}).get("memory_gb", ""),
+            "cuda_version": environment.get("gpu_info", {}).get("cuda_version", ""),
+            "tp_size": environment.get("parallel_config", {}).get("tp_size", ""),
+            "pp_size": environment.get("parallel_config", {}).get("pp_size", ""),
+            "framework": environment.get("system_info", {}).get("framework", ""),
         }
 
         for dataset_path, dataset_data in results.get("dataset_results", {}).items():
@@ -128,6 +138,9 @@ class ExcelExporter(ResultsExporter):
     def _create_summary_data(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Create summary data for Excel export."""
         summary = []
+        
+        config = results.get("config", {})
+        environment = config.get("environment", {})
 
         for dataset_path, dataset_data in results.get("dataset_results", {}).items():
             summary.append(
@@ -136,6 +149,11 @@ class ExcelExporter(ResultsExporter):
                     "Average Accuracy": dataset_data.get("average_accuracy", 0),
                     "Standard Deviation": dataset_data.get("average_std", 0),
                     "Number of Files": len(dataset_data.get("results", [])),
+                    "GPU Model": environment.get("gpu_info", {}).get("model", ""),
+                    "GPU Count": environment.get("gpu_info", {}).get("count", ""),
+                    "TP Size": environment.get("parallel_config", {}).get("tp_size", ""),
+                    "PP Size": environment.get("parallel_config", {}).get("pp_size", ""),
+                    "Framework": environment.get("system_info", {}).get("framework", ""),
                 }
             )
 
@@ -181,6 +199,11 @@ class HTMLExporter(ResultsExporter):
     def _generate_html(self, results: Dict[str, Any]) -> str:
         """Generate HTML content from results."""
         timestamp = results.get("timestamp", "")
+        config = results.get("config", {})
+        environment = config.get("environment", {})
+        gpu_info = environment.get("gpu_info", {})
+        parallel_config = environment.get("parallel_config", {})
+        system_info = environment.get("system_info", {})
 
         html = f"""
 <!DOCTYPE html>
@@ -190,6 +213,8 @@ class HTMLExporter(ResultsExporter):
     <style>
         body {{ font-family: Arial, sans-serif; margin: 40px; }}
         .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
+        .environment {{ background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+        .env-section {{ margin: 10px 0; }}
         .dataset {{ margin: 20px 0; border: 1px solid #ddd; border-radius: 5px; }}
         .dataset-header {{ background-color: #e8f4f8; padding: 15px; }}
         .results-table {{ width: 100%; border-collapse: collapse; }}
@@ -202,8 +227,31 @@ class HTMLExporter(ResultsExporter):
     <div class="header">
         <h1>🌟 Twinkle Eval Results</h1>
         <p><strong>Timestamp:</strong> {timestamp}</p>
-        <p><strong>Model:</strong> {results.get("config", {}).get("model", {}).get("name", "N/A")}</p>
-        <p><strong>Temperature:</strong> {results.get("config", {}).get("model", {}).get("temperature", "N/A")}</p>
+        <p><strong>Model:</strong> {config.get("model", {}).get("name", "N/A")}</p>
+        <p><strong>Temperature:</strong> {config.get("model", {}).get("temperature", "N/A")}</p>
+    </div>
+    
+    <div class="environment">
+        <h2>🖥️ Environment Information</h2>
+        <div class="env-section">
+            <h3>GPU Configuration</h3>
+            <p><strong>Model:</strong> {gpu_info.get("model", "N/A")}</p>
+            <p><strong>Count:</strong> {gpu_info.get("count", "N/A")}</p>
+            <p><strong>Memory:</strong> {gpu_info.get("memory_gb", "N/A")} GB</p>
+            <p><strong>CUDA Version:</strong> {gpu_info.get("cuda_version", "N/A")}</p>
+        </div>
+        <div class="env-section">
+            <h3>Parallel Configuration</h3>
+            <p><strong>TP Size:</strong> {parallel_config.get("tp_size", "N/A")}</p>
+            <p><strong>PP Size:</strong> {parallel_config.get("pp_size", "N/A")}</p>
+        </div>
+        <div class="env-section">
+            <h3>System Information</h3>
+            <p><strong>Framework:</strong> {system_info.get("framework", "N/A")}</p>
+            <p><strong>Python Version:</strong> {system_info.get("python_version", "N/A")}</p>
+            <p><strong>PyTorch Version:</strong> {system_info.get("torch_version", "N/A")}</p>
+            <p><strong>Node Count:</strong> {system_info.get("node_count", "N/A")}</p>
+        </div>
     </div>
 """
 

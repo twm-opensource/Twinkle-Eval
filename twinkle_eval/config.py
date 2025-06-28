@@ -105,6 +105,33 @@ class ConfigurationManager:
             if key not in self.config["evaluation"]:
                 self.config["evaluation"][key] = value
 
+        # 設定預設環境配置
+        if "environment" not in self.config:
+            self.config["environment"] = {}
+
+        env_defaults = {
+            "gpu_info": {
+                "model": "Unknown",
+                "count": 1,
+                "memory_gb": 0,
+                "cuda_version": "Unknown",
+                "driver_version": "Unknown"
+            },
+            "parallel_config": {
+                "tp_size": 1,
+                "pp_size": 1
+            },
+            "system_info": {
+                "framework": "Unknown",
+                "python_version": "Unknown",
+                "torch_version": "Unknown",
+                "node_count": 1
+            }
+        }
+        for key, value in env_defaults.items():
+            if key not in self.config["environment"]:
+                self.config["environment"][key] = value
+
     def _validate_dataset_paths(self):
         """驗證資料集路徑是否存在且可存取
 
