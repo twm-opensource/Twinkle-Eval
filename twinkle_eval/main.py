@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -346,6 +347,11 @@ def create_cli_parser() -> argparse.ArgumentParser:
 結果格式轉換:
   twinkle-eval --convert-to-html results_20240101_1200.json  # 將 JSON 結果轉換為 HTML
 
+效能基準測試:
+  twinkle-eval --benchmark                           # 執行預設的基準測試
+  twinkle-eval --benchmark --benchmark-requests 50  # 執行 50 個請求的測試
+  twinkle-eval --benchmark --benchmark-concurrency 5 --benchmark-rate 2  # 5 並發，2 請求/秒
+
 HuggingFace 資料集下載:
   twinkle-eval --download-dataset cais/mmlu          # 下載 MMLU 所有子集
   twinkle-eval --download-dataset cais/mmlu --dataset-subset anatomy  # 下載特定子集
@@ -413,6 +419,46 @@ HuggingFace 資料集下載:
         "--convert-to-html",
         metavar="JSON_FILE",
         help="將 JSON 結果檔案轉換為 HTML 格式",
+    )
+
+    # Benchmark 相關命令
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="執行 LLM 效能基準測試",
+    )
+
+    parser.add_argument(
+        "--benchmark-prompt",
+        metavar="PROMPT",
+        default="請用繁體中文回答：台灣的首都是哪裡？",
+        help="基準測試使用的提示文字 (預設: 請用繁體中文回答：台灣的首都是哪裡？)",
+    )
+
+    parser.add_argument(
+        "--benchmark-requests",
+        type=int,
+        default=100,
+        help="基準測試的總請求數 (預設: 100)",
+    )
+
+    parser.add_argument(
+        "--benchmark-concurrency",
+        type=int,
+        default=10,
+        help="基準測試的並發請求數 (預設: 10)",
+    )
+
+    parser.add_argument(
+        "--benchmark-rate",
+        type=float,
+        help="基準測試的請求速率 (請求/秒，不指定則全速發送)",
+    )
+
+    parser.add_argument(
+        "--benchmark-duration",
+        type=float,
+        help="基準測試的最大執行時間 (秒，不指定則執行完所有請求)",
     )
 
     return parser
@@ -504,6 +550,52 @@ def main() -> int:
             return convert_json_to_html(args.convert_to_html)
         except Exception as e:
             print(f"❌ 轉換失敗: {e}")
+            return 1
+
+    # Benchmark 命令
+    if args.benchmark:
+        try:
+            from .benchmark import BenchmarkRunner, print_benchmark_summary, save_benchmark_results
+            from .config import load_config
+
+            config = load_config(args.config)
+            runner = BenchmarkRunner(config)
+
+            print(f"🚀 開始執行 LLM 效能基準測試")
+            print(f"   提示文字: {args.benchmark_prompt}")
+            print(f"   請求數量: {args.benchmark_requests}")
+            print(f"   並發數量: {args.benchmark_concurrency}")
+            if args.benchmark_rate:
+                print(f"   請求速率: {args.benchmark_rate} 請求/秒")
+            if args.benchmark_duration:
+                print(f"   最大時間: {args.benchmark_duration} 秒")
+            print("-" * 60)
+
+            metrics = runner.run_benchmark(
+                prompt=args.benchmark_prompt,
+                num_requests=args.benchmark_requests,
+                concurrent_requests=args.benchmark_concurrency,
+                request_rate=args.benchmark_rate,
+                duration=args.benchmark_duration,
+            )
+
+            # 顯示結果摘要
+            print_benchmark_summary(metrics)
+
+            # 儲存結果
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            output_path = f"benchmark_results_{timestamp}.json"
+            if "llm_instance" in config:
+                del config["llm_instance"]
+            if "evaluation_strategy_instance" in config:
+                del config["evaluation_strategy_instance"]
+            save_benchmark_results(metrics, output_path, config)
+
+            return 0
+
+        except Exception as e:
+            print(f"❌ 基準測試失敗: {e}")
+            log_error(f"基準測試執行錯誤: {e}")
             return 1
 
     # 執行評測
