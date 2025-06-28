@@ -235,6 +235,9 @@ class HTMLExporter(ResultsExporter):
         # Ensure environment config is included
         enhanced_results = self._enhance_with_environment(results)
         
+        # Load detailed results from referenced files
+        enhanced_results = self._load_detailed_results(enhanced_results)
+        
         return self._generate_summary_html(enhanced_results)
 
     def _enhance_with_environment(self, results: Dict[str, Any]) -> Dict[str, Any]:
@@ -268,6 +271,33 @@ class HTMLExporter(ResultsExporter):
         
         return enhanced
 
+    def _load_detailed_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Load detailed results from referenced files."""
+        enhanced = results.copy()
+        
+        for dataset_path, dataset_data in enhanced.get("dataset_results", {}).items():
+            for file_result in dataset_data.get("results", []):
+                # Check if individual_runs contains result file references
+                individual_runs = file_result.get("individual_runs", {})
+                result_files = individual_runs.get("results", [])
+                
+                if result_files:
+                    # Load the first result file for detailed data
+                    result_file_path = result_files[0]
+                    try:
+                        with open(result_file_path, "r", encoding="utf-8") as f:
+                            detailed_data = json.load(f)
+                        
+                        # Add detailed data to file_result
+                        if "details" in detailed_data:
+                            file_result["details"] = detailed_data["details"]
+                            file_result["file"] = detailed_data.get("file", file_result.get("file", ""))
+                            file_result["accuracy"] = detailed_data.get("accuracy", file_result.get("accuracy_mean", 0))
+                    except (FileNotFoundError, json.JSONDecodeError) as e:
+                        print(f"⚠️ Warning: Could not load detailed results from {result_file_path}: {e}")
+        
+        return enhanced
+
     def _generate_summary_html(self, results: Dict[str, Any]) -> str:
         """Generate HTML content for summary and detailed results."""
         timestamp = results.get("timestamp", "")
@@ -277,13 +307,38 @@ class HTMLExporter(ResultsExporter):
         parallel_config = environment.get("parallel_config", {})
         system_info = environment.get("system_info", {})
         
-        # Check if this is detailed result
-        if "details" in results or "file" in results:
+        # Check if we have detailed results data
+        has_detailed_data = False
+        for dataset_path, dataset_data in results.get("dataset_results", {}).items():
+            for file_result in dataset_data.get("results", []):
+                if "details" in file_result:
+                    has_detailed_data = True
+                    break
+            if has_detailed_data:
+                break
+        
+        if has_detailed_data:
             # Handle detailed result display
             title = "Twinkle Eval 詳細結果"
-            file_path = results.get("file", "")
-            accuracy = results.get("accuracy", 0)
-            details = results.get("details", [])
+            
+            # Get all detailed results from all datasets
+            all_details = []
+            all_files = []
+            total_accuracy = 0
+            total_files = 0
+            
+            for dataset_path, dataset_data in results.get("dataset_results", {}).items():
+                for file_result in dataset_data.get("results", []):
+                    if "details" in file_result:
+                        all_details.extend(file_result["details"])
+                        all_files.append(file_result.get("file", ""))
+                        total_accuracy += file_result.get("accuracy", file_result.get("accuracy_mean", 0))
+                        total_files += 1
+            
+            # Calculate overall accuracy
+            overall_accuracy = total_accuracy / total_files if total_files > 0 else 0
+            file_paths = ", ".join(all_files) if all_files else ""
+            details = all_details
             
             html = f"""
 <!DOCTYPE html>
@@ -368,8 +423,8 @@ class HTMLExporter(ResultsExporter):
     <div class="header">
         <h1>🌟 {title}</h1>
         <p><strong>時間戳記：</strong> {timestamp}</p>
-        <p><strong>檔案：</strong> {file_path}</p>
-        <p><strong>總體準確率：</strong> <span class="accuracy">{accuracy:.2%}</span></p>
+        <p><strong>檔案：</strong> {file_paths}</p>
+        <p><strong>總體準確率：</strong> <span class="accuracy">{overall_accuracy:.2%}</span></p>
         <p><strong>Model:</strong> {config.get("model", {}).get("name", "N/A")}</p>
         <p><strong>Temperature:</strong> {config.get("model", {}).get("temperature", "N/A")}</p>
     </div>
