@@ -150,15 +150,15 @@ class TwinkleEvalRunner:
         if self.config is None:
             raise ConfigurationError("配置未載入")
 
+        # 移除物件實例（不可序列化）
+        if "llm_instance" in self.config:
+            del self.config["llm_instance"]
+
         save_config = copy.deepcopy(self.config)
 
         # 移除敏感資訊（API 金鑰）
         if "llm_api" in save_config and "api_key" in save_config["llm_api"]:
             del save_config["llm_api"]["api_key"]
-
-        # 移除物件實例（不可序列化）
-        if "llm_instance" in save_config:
-            del save_config["llm_instance"]
         if "evaluation_strategy_instance" in save_config:
             del save_config["evaluation_strategy_instance"]
 
@@ -512,7 +512,6 @@ def main() -> int:
         runner.initialize()
         runner.run_evaluation(args.export)
     except Exception as e:
-        print(e)
         log_error(f"執行失敗: {e}")
         return 1
 
