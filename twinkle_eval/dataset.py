@@ -203,13 +203,14 @@ def _download_single_subset(
     """下載單一子集的輔助函數，使用 HuggingFace 原始快取格式"""
     try:
         # 直接下載資料集到 HuggingFace 快取目錄
-        load_dataset(
+        hf_dataset = load_dataset(
             dataset_name,
             name=subset,
             split=split,
-            cache_dir=output_dir,
             trust_remote_code=False,
         )
+
+        hf_dataset.to_parquet(f"{output_dir}/{dataset_name.replace('/', '__')}/{subset}.parquet")
 
     except Exception as e:
         log_error(f"下載子集 {subset} 失敗: {e}")

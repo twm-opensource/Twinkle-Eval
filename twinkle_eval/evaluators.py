@@ -72,7 +72,7 @@ class Evaluator:
             future_tasks = []
             future_to_data = {}
 
-            for idx, q in enumerate(tqdm(dataset, desc="準備題庫中")):
+            for idx, q in enumerate(tqdm(dataset, desc="評測題庫中")):
                 if shuffle_enabled:
                     q = self.shuffle_question_options(q)
 
