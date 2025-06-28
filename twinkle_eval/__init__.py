@@ -28,7 +28,7 @@ __author__ = "Twinkle AI Team"
 __license__ = "MIT"
 
 from .config import ConfigurationManager, load_config
-from .datasets import Dataset, find_all_evaluation_files
+from .dataset import Dataset, find_all_evaluation_files
 from .evaluation_strategies import (
     BoxExtractionStrategy,
     CustomRegexStrategy,

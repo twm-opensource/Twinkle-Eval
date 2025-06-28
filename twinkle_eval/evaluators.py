@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from .datasets import Dataset
+from .dataset import Dataset
 from .evaluation_strategies import EvaluationStrategy
 from .logger import log_error
 from .models import LLM

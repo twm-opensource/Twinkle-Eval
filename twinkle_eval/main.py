@@ -9,7 +9,7 @@ import numpy as np
 from twinkle_eval.exceptions import ConfigurationError
 
 from .config import load_config
-from .datasets import find_all_evaluation_files
+from .dataset import find_all_evaluation_files
 from .evaluators import Evaluator
 from .logger import log_error, log_info
 from .results_exporters import ResultsExporterFactory
@@ -418,7 +418,7 @@ def main() -> int:
     # HuggingFace 資料集相關命令
     if args.download_dataset:
         try:
-            from .datasets import download_huggingface_dataset
+            from .dataset import download_huggingface_dataset
 
             download_huggingface_dataset(
                 dataset_name=args.download_dataset,
@@ -434,7 +434,7 @@ def main() -> int:
 
     if args.dataset_info:
         try:
-            from .datasets import list_huggingface_dataset_info
+            from .dataset import list_huggingface_dataset_info
 
             info = list_huggingface_dataset_info(
                 dataset_name=args.dataset_info, subset=args.dataset_subset
