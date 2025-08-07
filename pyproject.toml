@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "twinkle-eval"
-version = "1.1.0"
+version = "1.1.1"
 description = "🌟 高效且準確的 AI 模型評測工具"
 readme = "README.md"
 license = {text = "MIT"}
