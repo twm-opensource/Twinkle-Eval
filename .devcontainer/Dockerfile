@@ -1,8 +1,7 @@
 FROM harbor.apmic.ai/library/python311
 
 # install uv, but not use by default
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && . /root/.local/bin/env
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # textract .doc. See https://textract.readthedocs.io/en/stable/
 RUN apt-get update && apt-get install -y antiword 

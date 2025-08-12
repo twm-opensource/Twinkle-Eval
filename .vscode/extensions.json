@@ -5,6 +5,7 @@
         "kevinrose.vsc-python-indent",
         "aaron-bond.better-comments",
         "streetsidesoftware.code-spell-checker",
-        "ms-python.python"
+        "ms-python.python",
+        "anysphere.cursorpyright"
     ]
 }
