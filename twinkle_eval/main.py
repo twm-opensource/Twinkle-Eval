@@ -345,7 +345,7 @@ class TwinkleEvalRunner:
                 from .google_services import GoogleDriveUploader
 
                 uploader = GoogleDriveUploader(google_drive_config)
-                upload_info = uploader.upload_latest_files("logs", "results")
+                upload_info = uploader.upload_latest_files(self.start_time, "logs", "results")
 
                 if upload_info.get("uploaded_files"):
                     log_info(

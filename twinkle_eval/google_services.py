@@ -239,6 +239,7 @@ class GoogleDriveUploader:
 
     def upload_latest_files(
         self,
+        start_time: str,
         logs_directory: str = "logs",
         results_directory: str = "results",
     ) -> Dict[str, Any]:
@@ -247,6 +248,7 @@ class GoogleDriveUploader:
         Args:
             logs_directory: logs 資料夾路徑
             results_directory: results 資料夾路徑（eval_results_*.json 檔案也在此資料夾中）
+            start_time: 評測開始時間標記，用於篩選對應的檔案
 
         Returns:
             Dict[str, Any]: 上傳結果資訊
@@ -260,8 +262,7 @@ class GoogleDriveUploader:
 
         try:
             # 建立以時間戳命名的資料夾
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            folder_name = f"Eval_{timestamp}"
+            folder_name = f"Eval_{start_time}"
 
             parent_folder_id = self.config.get("log_folder_id")
             new_folder_id = self.create_folder(folder_name, parent_folder_id)
@@ -269,97 +270,92 @@ class GoogleDriveUploader:
             upload_info["folder_id"] = new_folder_id
             upload_info["folder_name"] = folder_name
 
-            # 上傳最新的 log 檔案
+            # 上傳符合 key 的 log 檔案
             if os.path.exists(logs_directory):
                 log_files = []
                 for file_name in os.listdir(logs_directory):
                     if file_name.endswith(".log"):
-                        file_path = os.path.join(logs_directory, file_name)
-                        file_stat = os.stat(file_path)
-                        log_files.append(
-                            {"name": file_name, "path": file_path, "mtime": file_stat.st_mtime}
-                        )
+                        # 只處理包含特定 key 的檔案
+                        if start_time in file_name:
+                            file_path = os.path.join(logs_directory, file_name)
+                            file_stat = os.stat(file_path)
+                            log_files.append(
+                                {"name": file_name, "path": file_path, "mtime": file_stat.st_mtime}
+                            )
 
                 if log_files:
-                    # 取最新的 log 檔案
-                    latest_log = sorted(log_files, key=lambda x: x["mtime"], reverse=True)[0]
-                    try:
-                        log_info(f"上傳最新的 log 檔案: {latest_log['name']} 到新資料夾")
-                        file_id = self.upload_file(latest_log["path"], new_folder_id)
-                        upload_info["uploaded_files"].append(
-                            {
-                                "type": "log",
-                                "file_name": latest_log["name"],
-                                "file_path": latest_log["path"],
-                                "drive_id": file_id,
-                            }
-                        )
-                    except ConfigurationError as e:
-                        log_error(f"上傳 log 檔案失敗: {e}")
+                    # 上傳符合 key 的 log 檔案
+                    for log_file in log_files:
+                        try:
+                            log_info(f"上傳 log 檔案: {log_file['name']} 到新資料夾")
+                            file_id = self.upload_file(log_file["path"], new_folder_id)
+                            upload_info["uploaded_files"].append(
+                                {
+                                    "type": "log",
+                                    "file_name": log_file["name"],
+                                    "file_path": log_file["path"],
+                                    "drive_id": file_id,
+                                }
+                            )
+                        except ConfigurationError as e:
+                            log_error(f"上傳 log 檔案失敗: {e}")
 
-            # 上傳最新的 results 檔案（包括 eval_results_*.json）
+            # 上傳 results 資料夾中特定 key 的檔案
             if os.path.exists(results_directory):
                 result_files = []
                 eval_result_files = []
 
                 for file_name in os.listdir(results_directory):
-                    if file_name.endswith((".json", ".html", ".csv", ".xlsx")):
-                        file_path = os.path.join(results_directory, file_name)
-                        file_stat = os.stat(file_path)
-                        file_info = {
-                            "name": file_name,
-                            "path": file_path,
-                            "mtime": file_stat.st_mtime,
-                        }
+                    if file_name.endswith((".json", ".html", ".csv", ".xlsx", ".jsonl")):
+                        # 只處理包含特定 key 的檔案
+                        if start_time in file_name:
+                            file_path = os.path.join(results_directory, file_name)
+                            file_stat = os.stat(file_path)
+                            file_info = {
+                                "name": file_name,
+                                "path": file_path,
+                                "mtime": file_stat.st_mtime,
+                            }
 
-                        # 區分 eval_results_*.json 和其他 results 檔案
-                        if file_name.startswith("eval_results_") and file_name.endswith(".json"):
-                            eval_result_files.append(file_info)
-                        else:
-                            result_files.append(file_info)
+                            # 區分 eval_results_*.json 和其他 results 檔案
+                            if file_name.startswith("eval_results_"):
+                                eval_result_files.append(file_info)
+                            else:
+                                result_files.append(file_info)
 
-                # 上傳一般 results 檔案
+                # 上傳符合 key 的一般 results 檔案
                 if result_files:
-                    extensions = set(os.path.splitext(f["name"])[1] for f in result_files)
-                    for ext in extensions:
-                        ext_files = [f for f in result_files if f["name"].endswith(ext)]
-                        latest_file = sorted(ext_files, key=lambda x: x["mtime"], reverse=True)[0]
-
+                    for file_info in result_files:
                         try:
-                            log_info(f"上傳最新的 results 檔案: {latest_file['name']} 到新資料夾")
-                            file_id = self.upload_file(latest_file["path"], new_folder_id)
+                            log_info(f"上傳 results 檔案: {file_info['name']} 到新資料夾")
+                            file_id = self.upload_file(file_info["path"], new_folder_id)
                             upload_info["uploaded_files"].append(
                                 {
                                     "type": "results",
-                                    "file_name": latest_file["name"],
-                                    "file_path": latest_file["path"],
+                                    "file_name": file_info["name"],
+                                    "file_path": file_info["path"],
                                     "drive_id": file_id,
                                 }
                             )
                         except ConfigurationError as e:
                             log_error(f"上傳 results 檔案失敗: {e}")
 
-                # 上傳 eval_results_*.json 檔案
+                # 上傳符合 key 的 eval_results_*.jsonl 檔案
                 if eval_result_files:
-                    # 取最新的 eval_results 檔案
-                    latest_eval_file = sorted(
-                        eval_result_files, key=lambda x: x["mtime"], reverse=True
-                    )[0]
-                    try:
-                        log_info(
-                            f"上傳最新的 eval_results 檔案: {latest_eval_file['name']} 到新資料夾"
-                        )
-                        file_id = self.upload_file(latest_eval_file["path"], new_folder_id)
-                        upload_info["uploaded_files"].append(
-                            {
-                                "type": "eval_results",
-                                "file_name": latest_eval_file["name"],
-                                "file_path": latest_eval_file["path"],
-                                "drive_id": file_id,
-                            }
-                        )
-                    except ConfigurationError as e:
-                        log_error(f"上傳 eval_results 檔案失敗: {e}")
+                    for file_info in eval_result_files:
+                        try:
+                            log_info(f"上傳 eval_results 檔案: {file_info['name']} 到新資料夾")
+                            file_id = self.upload_file(file_info["path"], new_folder_id)
+                            upload_info["uploaded_files"].append(
+                                {
+                                    "type": "eval_results",
+                                    "file_name": file_info["name"],
+                                    "file_path": file_info["path"],
+                                    "drive_id": file_id,
+                                }
+                            )
+                        except ConfigurationError as e:
+                            log_error(f"上傳 eval_results 檔案失敗: {e}")
 
             log_info(
                 f"成功上傳 {len(upload_info['uploaded_files'])} 個檔案到新資料夾: {folder_name}"
