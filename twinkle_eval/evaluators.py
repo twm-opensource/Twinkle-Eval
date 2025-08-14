@@ -136,17 +136,12 @@ class Evaluator:
 
         results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
-        results_path = os.path.join(results_dir, f"eval_results_{timestamp}.json")
+        results_path = os.path.join(results_dir, f"eval_results_{timestamp}.jsonl")
 
-        result_data = {
-            "timestamp": timestamp,
-            "file": file_path,
-            "accuracy": accuracy,
-            "details": detailed_results,
-        }
-
-        with open(results_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(result_data, ensure_ascii=False) + "\n")
+        # 將每個 detail 項目寫入 JSONL 檔案
+        with open(results_path, "w", encoding="utf-8") as f:
+            for detail in detailed_results:
+                f.write(json.dumps(detail, ensure_ascii=False) + "\n")
 
         print(f"✅ 評測完成，結果已儲存至 {results_path}")
         return file_path, accuracy, results_path

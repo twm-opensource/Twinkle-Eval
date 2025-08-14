@@ -49,6 +49,7 @@ class ConfigurationManager:
             # 套用預設值並驗證
             self._apply_defaults()
             self._validate_dataset_paths()
+            self._validate_google_services()
             self._instantiate_components()
 
             log_info("配置載入和驗證完成")
@@ -115,18 +116,15 @@ class ConfigurationManager:
                 "count": 1,
                 "memory_gb": 0,
                 "cuda_version": "Unknown",
-                "driver_version": "Unknown"
+                "driver_version": "Unknown",
             },
-            "parallel_config": {
-                "tp_size": 1,
-                "pp_size": 1
-            },
+            "parallel_config": {"tp_size": 1, "pp_size": 1},
             "system_info": {
                 "framework": "Unknown",
                 "python_version": "Unknown",
                 "torch_version": "Unknown",
-                "node_count": 1
-            }
+                "node_count": 1,
+            },
         }
         for key, value in env_defaults.items():
             if key not in self.config["environment"]:
@@ -188,6 +186,207 @@ class ConfigurationManager:
             error_msg = f"不支援的評測方法: {eval_method}. 可用方法: {available_types}"
             log_error(error_msg)
             raise ConfigurationError(error_msg) from e
+
+    def _validate_google_services(self):
+        """驗證 Google 服務配置
+
+        檢查 Google Drive 和 Google Sheets 的配置是否正確，
+        包括驗證憑證檔案、必要參數等
+
+        Raises:
+            ConfigurationError: 當 Google 服務配置無效時拋出
+        """
+        google_services_config = self.config.get("google_services")
+        if not google_services_config:
+            return  # 如果沒有配置 Google 服務則跳過驗證
+
+        # 驗證 Google Sheets 配置
+        google_sheets_config = google_services_config.get("google_sheets", {})
+        if google_sheets_config.get("enabled", False):
+            self._validate_google_sheets_config(google_sheets_config)
+            log_info("Google Sheets 配置驗證完成")
+
+        # 驗證 Google Drive 配置
+        google_drive_config = google_services_config.get("google_drive", {})
+        if google_drive_config.get("enabled", False):
+            try:
+                self._validate_google_drive_config(google_drive_config)
+                log_info("Google Drive 配置驗證完成")
+            except ConfigurationError as e:
+                # 如果是權限問題，建議使用 OAuth 方式
+                if "不存在或 Service Account 無權限存取" in str(e):
+                    auth_method = google_drive_config.get("auth_method", "service_account")
+                    if auth_method == "service_account":
+                        log_error(f"Service Account 驗證失敗: {e}")
+                        log_info("建議解決方案:")
+                        log_info("1. 將 Service Account Email 加入 Google Drive 資料夾共享")
+                        log_info("2. 或改用 OAuth 驗證方式：設定 auth_method: 'oauth'")
+                        # 不拋出錯誤，允許繼續執行，但會在實際上傳時失敗並提示
+                    else:
+                        raise
+                else:
+                    raise
+
+    def _validate_google_sheets_config(self, config: Dict[str, Any]):
+        """驗證 Google Sheets 特定配置
+
+        Args:
+            config: Google Sheets 配置字典
+
+        Raises:
+            ConfigurationError: 配置驗證失敗時拋出
+        """
+        # 檢查必要參數
+        spreadsheet_id = config.get("spreadsheet_id")
+        if not spreadsheet_id or not spreadsheet_id.strip():
+            raise ConfigurationError("Google Sheets 配置錯誤: spreadsheet_id 為必填項目")
+
+        # 驗證身份驗證配置
+        self._validate_google_auth_config(config, "Google Sheets")
+
+        try:
+            # 嘗試建立 GoogleSheetsService 實例來驗證配置
+            from .google_services import GoogleSheetsService
+
+            sheets_service = GoogleSheetsService(config)
+
+            # 嘗試驗證 spreadsheet 是否可以存取
+            sheet_name = config.get("sheet_name", "Results")
+            sheets_service.service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+
+            log_info(f"Google Sheets 連接測試成功 - 試算表 ID: {spreadsheet_id}")
+
+        except Exception as e:
+            raise ConfigurationError(f"Google Sheets 配置驗證失敗: {e}") from e
+
+    def _validate_google_drive_config(self, config: Dict[str, Any]):
+        """驗證 Google Drive 特定配置
+
+        Args:
+            config: Google Drive 配置字典
+
+        Raises:
+            ConfigurationError: 配置驗證失敗時拋出
+        """
+        # 驗證身份驗證配置
+        self._validate_google_auth_config(config, "Google Drive")
+
+        try:
+            # 嘗試建立 GoogleDriveUploader 實例來驗證配置
+            from .google_services import GoogleDriveUploader
+
+            drive_uploader = GoogleDriveUploader(config)
+
+            # 驗證 log_folder_id 是否存在且可存取（如果有設定的話）
+            log_folder_id = config.get("log_folder_id")
+            if log_folder_id and log_folder_id.strip():
+                try:
+                    # 嘗試取得資料夾資訊來驗證它是否存在且可存取
+                    folder_info = (
+                        drive_uploader.service.files()
+                        .get(
+                            fileId=log_folder_id, 
+                            fields="id,name,mimeType",
+                            supportsAllDrives=True
+                        )
+                        .execute()
+                    )
+
+                    # 檢查是否為資料夾
+                    if folder_info.get("mimeType") != "application/vnd.google-apps.folder":
+                        raise ConfigurationError(
+                            f"Google Drive log_folder_id 指向的不是資料夾: {log_folder_id}"
+                        )
+
+                    log_info(
+                        f"Google Drive 資料夾驗證成功 - {folder_info.get('name')} ({log_folder_id})"
+                    )
+
+                except Exception as folder_error:
+                    if "File not found" in str(folder_error) or "notFound" in str(folder_error):
+                        service_account_email = None
+                        try:
+                            import json
+
+                            credentials_file = config.get("credentials_file")
+                            with open(credentials_file, "r", encoding="utf-8") as f:
+                                cred_data = json.load(f)
+                                service_account_email = cred_data.get("client_email", "未知")
+                        except:
+                            service_account_email = "未知"
+
+                        raise ConfigurationError(
+                            f"Google Drive 資料夾不存在或 Service Account 無權限存取: {log_folder_id}\n"
+                            f"Service Account: {service_account_email}\n"
+                            f"請確認：\n"
+                            f"1. 資料夾 ID 正確: {log_folder_id}\n"
+                            f"2. 資料夾存在且未被刪除\n"
+                            f"3. Service Account ({service_account_email}) 已被加入資料夾的共享權限"
+                        ) from folder_error
+                    else:
+                        raise ConfigurationError(
+                            f"Google Drive 資料夾驗證失敗: {folder_error}"
+                        ) from folder_error
+
+            log_info("Google Drive 配置驗證完成")
+
+        except Exception as e:
+            raise ConfigurationError(f"Google Drive 配置驗證失敗: {e}") from e
+
+    def _validate_google_auth_config(self, config: Dict[str, Any], service_name: str):
+        """驗證 Google 服務身份驗證配置
+
+        Args:
+            config: Google 服務配置字典
+            service_name: 服務名稱（用於錯誤訊息）
+
+        Raises:
+            ConfigurationError: 身份驗證配置驗證失敗時拋出
+        """
+        import os
+
+        auth_method = config.get("auth_method", "service_account")
+        credentials_file = config.get("credentials_file")
+
+        if not credentials_file or not credentials_file.strip():
+            raise ConfigurationError(f"{service_name} 配置錯誤: credentials_file 為必填項目")
+
+        if not os.path.exists(credentials_file):
+            raise ConfigurationError(
+                f"{service_name} 配置錯誤: 憑證檔案不存在 - {credentials_file}"
+            )
+
+        # 驗證憑證檔案格式
+        if auth_method == "service_account":
+            try:
+                import json
+
+                with open(credentials_file, "r", encoding="utf-8") as f:
+                    cred_data = json.load(f)
+
+                # 檢查 Service Account 必要欄位
+                required_fields = [
+                    "type",
+                    "project_id",
+                    "private_key_id",
+                    "private_key",
+                    "client_email",
+                ]
+                for field in required_fields:
+                    if field not in cred_data:
+                        raise ConfigurationError(
+                            f"{service_name} Service Account 憑證檔案格式錯誤: 缺少必要欄位 '{field}'"
+                        )
+
+                if cred_data.get("type") != "service_account":
+                    raise ConfigurationError(
+                        f"{service_name} 憑證檔案格式錯誤: 類型應為 'service_account'"
+                    )
+
+            except json.JSONDecodeError as e:
+                raise ConfigurationError(f"{service_name} 憑證檔案格式錯誤: {e}") from e
+            except Exception as e:
+                raise ConfigurationError(f"{service_name} 憑證檔案讀取失敗: {e}") from e
 
 
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:

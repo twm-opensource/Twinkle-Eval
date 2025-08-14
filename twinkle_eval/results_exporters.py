@@ -46,11 +46,11 @@ class JSONExporter(ResultsExporter):
     def _enhance_with_environment(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure environment config is included in results."""
         enhanced = results.copy()
-        
+
         # Check if config and environment already exist
         if "config" not in enhanced:
             enhanced["config"] = {}
-        
+
         if "environment" not in enhanced["config"]:
             enhanced["config"]["environment"] = {
                 "gpu_info": {
@@ -58,20 +58,17 @@ class JSONExporter(ResultsExporter):
                     "count": "N/A",
                     "memory_gb": "N/A",
                     "cuda_version": "N/A",
-                    "driver_version": "N/A"
+                    "driver_version": "N/A",
                 },
-                "parallel_config": {
-                    "tp_size": "N/A",
-                    "pp_size": "N/A"
-                },
+                "parallel_config": {"tp_size": "N/A", "pp_size": "N/A"},
                 "system_info": {
                     "framework": "N/A",
                     "python_version": "N/A",
                     "torch_version": "N/A",
-                    "node_count": "N/A"
-                }
+                    "node_count": "N/A",
+                },
             }
-        
+
         return enhanced
 
 
@@ -234,20 +231,20 @@ class HTMLExporter(ResultsExporter):
         """Generate HTML content from results."""
         # Ensure environment config is included
         enhanced_results = self._enhance_with_environment(results)
-        
+
         # Load detailed results from referenced files
         enhanced_results = self._load_detailed_results(enhanced_results)
-        
+
         return self._generate_summary_html(enhanced_results)
 
     def _enhance_with_environment(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure environment config is included in results."""
         enhanced = results.copy()
-        
+
         # Check if config and environment already exist
         if "config" not in enhanced:
             enhanced["config"] = {}
-        
+
         if "environment" not in enhanced["config"]:
             enhanced["config"]["environment"] = {
                 "gpu_info": {
@@ -255,47 +252,50 @@ class HTMLExporter(ResultsExporter):
                     "count": "N/A",
                     "memory_gb": "N/A",
                     "cuda_version": "N/A",
-                    "driver_version": "N/A"
+                    "driver_version": "N/A",
                 },
-                "parallel_config": {
-                    "tp_size": "N/A",
-                    "pp_size": "N/A"
-                },
+                "parallel_config": {"tp_size": "N/A", "pp_size": "N/A"},
                 "system_info": {
                     "framework": "N/A",
                     "python_version": "N/A",
                     "torch_version": "N/A",
-                    "node_count": "N/A"
-                }
+                    "node_count": "N/A",
+                },
             }
-        
+
         return enhanced
 
     def _load_detailed_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Load detailed results from referenced files."""
         enhanced = results.copy()
-        
+
         for dataset_path, dataset_data in enhanced.get("dataset_results", {}).items():
             for file_result in dataset_data.get("results", []):
                 # Check if individual_runs contains result file references
                 individual_runs = file_result.get("individual_runs", {})
                 result_files = individual_runs.get("results", [])
-                
+
                 if result_files:
                     # Load the first result file for detailed data
                     result_file_path = result_files[0]
                     try:
                         with open(result_file_path, "r", encoding="utf-8") as f:
                             detailed_data = json.load(f)
-                        
+
                         # Add detailed data to file_result
                         if "details" in detailed_data:
                             file_result["details"] = detailed_data["details"]
-                            file_result["file"] = detailed_data.get("file", file_result.get("file", ""))
-                            file_result["accuracy"] = detailed_data.get("accuracy", file_result.get("accuracy_mean", 0))
+                            file_result["file"] = detailed_data.get(
+                                "file", file_result.get("file", "")
+                            )
+                            file_result["accuracy"] = detailed_data.get(
+                                "accuracy", file_result.get("accuracy_mean", 0)
+                            )
                     except (FileNotFoundError, json.JSONDecodeError) as e:
-                        print(f"⚠️ Warning: Could not load detailed results from {result_file_path}: {e}")
-        
+                        print(
+                            f"⚠️ Warning: Could not load detailed results from {result_file_path}: {e}"
+                        )
+
         return enhanced
 
     def _generate_summary_html(self, results: Dict[str, Any]) -> str:
@@ -306,7 +306,7 @@ class HTMLExporter(ResultsExporter):
         gpu_info = environment.get("gpu_info", {})
         parallel_config = environment.get("parallel_config", {})
         system_info = environment.get("system_info", {})
-        
+
         # Check if we have detailed results data
         has_detailed_data = False
         for dataset_path, dataset_data in results.get("dataset_results", {}).items():
@@ -316,30 +316,32 @@ class HTMLExporter(ResultsExporter):
                     break
             if has_detailed_data:
                 break
-        
+
         if has_detailed_data:
             # Handle detailed result display
             title = "Twinkle Eval 詳細結果"
-            
+
             # Get all detailed results from all datasets
             all_details = []
             all_files = []
             total_accuracy = 0
             total_files = 0
-            
+
             for dataset_path, dataset_data in results.get("dataset_results", {}).items():
                 for file_result in dataset_data.get("results", []):
                     if "details" in file_result:
                         all_details.extend(file_result["details"])
                         all_files.append(file_result.get("file", ""))
-                        total_accuracy += file_result.get("accuracy", file_result.get("accuracy_mean", 0))
+                        total_accuracy += file_result.get(
+                            "accuracy", file_result.get("accuracy_mean", 0)
+                        )
                         total_files += 1
-            
+
             # Calculate overall accuracy
             overall_accuracy = total_accuracy / total_files if total_files > 0 else 0
             file_paths = ", ".join(all_files) if all_files else ""
             details = all_details
-            
+
             html = f"""
 <!DOCTYPE html>
 <html>
@@ -376,7 +378,7 @@ class HTMLExporter(ResultsExporter):
         .stat-item {{ background-color: #ffffff; padding: 15px; border-radius: 10px; flex: 1; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
         .stat-number {{ font-size: 2em; font-weight: bold; color: #007bff; }}
         .stat-label {{ color: #6c757d; margin-top: 5px; }}
-        
+
         /* Tab styles */
         .tabs {{ margin: 20px 0; }}
         .tab-buttons {{ display: flex; background-color: #f8f9fa; border-radius: 10px 10px 0 0; border: 1px solid #ddd; border-bottom: none; }}
@@ -394,25 +396,25 @@ class HTMLExporter(ResultsExporter):
             content.classList.toggle('show');
             icon.classList.toggle('rotated');
         }}
-        
+
         function showTab(tabName) {{
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {{
                 content.classList.remove('active');
             }});
-            
+
             // Remove active class from all buttons
             document.querySelectorAll('.tab-button').forEach(button => {{
                 button.classList.remove('active');
             }});
-            
+
             // Show selected tab content
             document.getElementById(tabName + '-tab').classList.add('active');
-            
+
             // Add active class to clicked button
             document.querySelector(`[onclick="showTab('${{tabName}}')"]`).classList.add('active');
         }}
-        
+
         window.onload = function() {{
             // Show first tab by default
             showTab('correct');
@@ -428,7 +430,7 @@ class HTMLExporter(ResultsExporter):
         <p><strong>Model:</strong> {config.get("model", {}).get("name", "N/A")}</p>
         <p><strong>Temperature:</strong> {config.get("model", {}).get("temperature", "N/A")}</p>
     </div>
-    
+
     <div class="environment">
         <div class="env-header" onclick="toggleEnvironment()">
             <h2>🖥️ Environment Information</h2>
@@ -457,7 +459,7 @@ class HTMLExporter(ResultsExporter):
             </div>
         </div>
     </div>
-    
+
     <div class="summary-stats">
         <div class="stat-item">
             <div class="stat-number">{len(details)}</div>
@@ -477,21 +479,21 @@ class HTMLExporter(ResultsExporter):
         </div>
     </div>
 """
-            
+
             # Add tabbed questions
-            correct_details = [d for d in details if d.get('is_correct', False)]
-            incorrect_details = [d for d in details if not d.get('is_correct', False)]
-            
+            correct_details = [d for d in details if d.get("is_correct", False)]
+            incorrect_details = [d for d in details if not d.get("is_correct", False)]
+
             html += f"""
     <div class="tabs">
         <div class="tab-buttons">
             <button class="tab-button correct" onclick="showTab('correct')">✓ 正確答題 ({len(correct_details)})</button>
             <button class="tab-button incorrect" onclick="showTab('incorrect')">✗ 錯誤答題 ({len(incorrect_details)})</button>
         </div>
-        
+
         <div id="correct-tab" class="tab-content">
 """
-            
+
             for i, detail in enumerate(correct_details, 1):
                 question_id = detail.get("question_id", i)
                 question = detail.get("question", "")
@@ -509,34 +511,34 @@ class HTMLExporter(ResultsExporter):
                     <h3>第 {question_id} 題</h3>
                     <span class="status-badge correct-badge">✓ 正確</span>
                 </div>
-                
+
                 <div class="question-text">{question}</div>
-                
+
                 <div class="answer-section">
                     <p><strong>正確答案：</strong> <span class="correct-answer">{correct_answer}</span></p>
                     <p><strong>預測答案：</strong> <span class="correct-answer">{predicted_answer}</span></p>
                 </div>
-                
+
                 <div class="llm-output">
                     <strong>LLM 輸出：</strong>
                     {llm_output}
                 </div>
-                
+
                 {f'<div class="reasoning"><strong>推理過程：</strong>{reasoning}</div>' if reasoning else ''}
-                
+
                 <div class="usage-info">
-                    <strong>Token 使用量：</strong> 
+                    <strong>Token 使用量：</strong>
                     提示 {usage_prompt:,} | 完成 {usage_completion:,} | 總計 {usage_total:,}
                 </div>
             </div>
 """
-            
+
             html += """
         </div>
-        
+
         <div id="incorrect-tab" class="tab-content">
 """
-            
+
             for i, detail in enumerate(incorrect_details, 1):
                 question_id = detail.get("question_id", i)
                 question = detail.get("question", "")
@@ -554,28 +556,28 @@ class HTMLExporter(ResultsExporter):
                     <h3>第 {question_id} 題</h3>
                     <span class="status-badge incorrect-badge">✗ 錯誤</span>
                 </div>
-                
+
                 <div class="question-text">{question}</div>
-                
+
                 <div class="answer-section">
                     <p><strong>正確答案：</strong> <span class="correct-answer">{correct_answer}</span></p>
                     <p><strong>預測答案：</strong> <span class="incorrect-answer">{predicted_answer}</span></p>
                 </div>
-                
+
                 <div class="llm-output">
                     <strong>LLM 輸出：</strong>
                     {llm_output}
                 </div>
-                
+
                 {f'<div class="reasoning"><strong>推理過程：</strong>{reasoning}</div>' if reasoning else ''}
-                
+
                 <div class="usage-info">
-                    <strong>Token 使用量：</strong> 
+                    <strong>Token 使用量：</strong>
                     提示 {usage_prompt:,} | 完成 {usage_completion:,} | 總計 {usage_total:,}
                 </div>
             </div>
 """
-            
+
             html += """
         </div>
     </div>
@@ -621,7 +623,7 @@ class HTMLExporter(ResultsExporter):
         <p><strong>Model:</strong> {config.get("model", {}).get("name", "N/A")}</p>
         <p><strong>Temperature:</strong> {config.get("model", {}).get("temperature", "N/A")}</p>
     </div>
-    
+
     <div class="environment">
         <div class="env-header" onclick="toggleEnvironment()">
             <h2>🖥️ Environment Information</h2>
@@ -699,6 +701,7 @@ class ResultsExporterFactory:
         "csv": CSVExporter,
         "excel": ExcelExporter,
         "html": HTMLExporter,
+        "google_sheets": None,  # 延遲載入以避免循環匯入
     }
 
     @classmethod
@@ -719,6 +722,15 @@ class ResultsExporterFactory:
                 f"Unsupported exporter type: {exporter_type}. Available types: {available_types}"
             )
 
+        # 延遲載入 Google Sheets exporter 以避免循環匯入
+        if exporter_type == "google_sheets" and cls._registry[exporter_type] is None:
+            try:
+                from .google_services import GoogleSheetsExporter
+
+                cls._registry[exporter_type] = GoogleSheetsExporter
+            except ImportError as e:
+                raise ValueError(f"Google Sheets exporter 不可用，請確認已安裝相關依賴: {e}")
+
         exporter_class = cls._registry[exporter_type]
         return exporter_class(config)
 
@@ -729,14 +741,24 @@ class ResultsExporterFactory:
 
     @classmethod
     def export_results(
-        cls, results: Dict[str, Any], output_path: str, formats: List[str]
+        cls,
+        results: Dict[str, Any],
+        output_path: str,
+        formats: List[str],
+        config: Optional[Dict[str, Any]] = None,
     ) -> List[str]:
         """Export results to multiple formats."""
         exported_files = []
 
         for format_type in formats:
             try:
-                exporter = cls.create_exporter(format_type)
+                # 為 google_sheets 提供配置參數
+                if format_type == "google_sheets" and config and "google_services" in config:
+                    google_sheets_config = config["google_services"].get("google_sheets", {})
+                    exporter = cls.create_exporter(format_type, google_sheets_config)
+                else:
+                    exporter = cls.create_exporter(format_type)
+
                 base_path = os.path.splitext(output_path)[0]
                 format_path = base_path + exporter.get_file_extension()
                 exported_file = exporter.export(results, format_path)

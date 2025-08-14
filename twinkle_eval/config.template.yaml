@@ -57,3 +57,20 @@ environment:
 
 logging:
   level: "INFO"   # 日誌等級（可選 DEBUG, INFO, WARNING, ERROR）
+
+# Google 服務配置（可選）
+google_services:
+  # Google Drive 設定 - 用於上傳 log 檔案
+  google_drive:
+    enabled: false                                    # 是否啟用 Google Drive 上傳
+    auth_method: "service_account"                    # 驗證方式: service_account 或 oauth
+    credentials_file: "service_account.json"  # Service Account 憑證檔案路徑 (service_account) 或 OAuth 客戶端憑證 (oauth)
+    log_folder_id: ""                                # 目標資料夾 ID（可選，不填則上傳到根目錄）
+  
+  # Google Sheets 設定 - 用於記錄評測結果
+  google_sheets:
+    enabled: false                                    # 是否啟用 Google Sheets 匯出
+    auth_method: "service_account"                    # 驗證方式: service_account 或 oauth  
+    credentials_file: "service_account.json"  # Service Account 憑證檔案路徑
+    spreadsheet_id: ""                               # 試算表 ID（必須）
+    sheet_name: "Results"                            # 工作表名稱（預設為 Results）

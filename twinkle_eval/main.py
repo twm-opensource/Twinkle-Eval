@@ -318,11 +318,60 @@ class TwinkleEvalRunner:
         # 以多種格式輸出結果
         base_output_path = os.path.join(self.results_dir, f"results_{self.start_time}")
         exported_files = ResultsExporterFactory.export_results(
-            final_results, base_output_path, export_formats
+            final_results, base_output_path, export_formats, self.config
         )
+
+        # Google 服務整合
+        self._handle_google_services(final_results, export_formats)
 
         log_info(f"評測完成，結果已匯出至: {', '.join(exported_files)}")
         return exported_files[0] if exported_files else ""
+
+    def _handle_google_services(self, results: Dict[str, Any], export_formats: List[str]):
+        """處理 Google 服務整合
+
+        Args:
+            results: 評測結果字典
+            export_formats: 匯出格式列表
+        """
+        google_services_config = self.config.get("google_services")
+        if not google_services_config:
+            return
+
+        # 處理 Google Drive 檔案上傳（最新的 log 和 results）
+        google_drive_config = google_services_config.get("google_drive", {})
+        if google_drive_config.get("enabled", False):
+            try:
+                from .google_services import GoogleDriveUploader
+
+                uploader = GoogleDriveUploader(google_drive_config)
+                upload_info = uploader.upload_latest_files(self.start_time, "logs", "results")
+
+                if upload_info.get("uploaded_files"):
+                    log_info(
+                        f"成功建立資料夾: {upload_info['folder_name']} ({upload_info['folder_id']})"
+                    )
+                    log_info(f"成功上傳 {len(upload_info['uploaded_files'])} 個檔案到 Google Drive")
+
+                    for file_info in upload_info["uploaded_files"]:
+                        log_info(f"  - {file_info['type']}: {file_info['file_name']}")
+            except Exception as e:
+                log_error(f"Google Drive 檔案上傳失敗: {e}")
+
+        # 處理 Google Sheets 結果匯出
+        google_sheets_config = google_services_config.get("google_sheets", {})
+        if google_sheets_config.get("enabled", False):
+            try:
+                # 檢查是否已經在 export_formats 中指定 google_sheets
+                if "google_sheets" not in export_formats:
+                    # 如果用戶沒有明確指定，我們自動執行 Google Sheets 匯出
+                    sheets_exporter = ResultsExporterFactory.create_exporter(
+                        "google_sheets", google_sheets_config
+                    )
+                    sheets_url = sheets_exporter.export(results, "google_sheets_export")
+                    log_info(f"結果已自動匯出到 Google Sheets: {sheets_url}")
+            except Exception as e:
+                log_error(f"Google Sheets 結果匯出失敗: {e}")
 
 
 def create_cli_parser() -> argparse.ArgumentParser:
@@ -340,7 +389,7 @@ def create_cli_parser() -> argparse.ArgumentParser:
 使用範例:
   twinkle-eval                          # 使用預設配置執行
   twinkle-eval --config custom.yaml    # 使用自定義配置檔
-  twinkle-eval --export json csv html  # 輸出為多種格式
+  twinkle-eval --export json csv html google_sheets  # 輸出為多種格式
   twinkle-eval --list-llms             # 列出可用的 LLM 類型
   twinkle-eval --list-strategies       # 列出可用的評測策略
 
