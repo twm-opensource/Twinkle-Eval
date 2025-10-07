@@ -1,0 +1,57 @@
+llm_api:
+  base_url: "http://localhost:8000/v1"  # 改成你的模型 API 位址
+    # api_key: 請使用環境變數 LLM_API_KEY 來設定你的 API 金鑰
+  disable_ssl_verify: false
+  api_rate_limit: 5  # 每秒請求限制 (-1 為不限制)
+  max_retries: 5
+  timeout: 600  # 超時時間(秒)
+
+model:
+    name: "${MODEL_NAME}"  # 你的模型名稱，請設置環境變數 MODEL_NAME 或直接填入模型名稱
+  temperature: 0.0  # 建議用 0 以獲得穩定結果
+  top_p: 0.9
+  max_tokens: 4096
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+
+evaluation:
+  dataset_paths:
+    - "datasets/taigi/"  # 存放轉換後的台語試題資料夾
+
+  evaluation_method: "box"  # 使用 box 模式進行評測
+
+  # 台語專用的系統提示詞
+  system_prompt:
+    zh: |
+      使用者將提供一個台語試題,並附上選項 A、B、C、D。
+      
+      請仔細閱讀題目內容,根據題意選出最符合的選項,並以下列格式輸出:
+      \box{選項}
+      
+      注意事項:
+      1. 題目可能包含台語文字和閱讀理解
+      2. 請確保僅將選項字母(A/B/C/D)包含在 { } 中
+      3. 不要輸出任何解釋或額外內容
+      4. 嚴格遵循 \box{X} 格式,否則將不計算為有效答案
+
+    en: |
+      The user will provide a Taiwanese Hokkien language test question with options A, B, C, and D.
+      
+      Please read the question carefully and select the option that best fits the requirements.
+      Output the selected option in the following format:
+      \box{Option}
+      
+      Important:
+      1. The question may contain Taiwanese Hokkien text
+      2. Include only the option letter (A/B/C/D) within the curly braces
+      3. Do not output any explanation or extra content
+      4. Strictly follow the \box{X} format
+
+  # 如果有特定資料集需要用英文提示詞,可以在這裡指定
+  datasets_prompt_map: {}
+
+  repeat_runs: 5  # 重複測試次數,建議至少3-5次
+  shuffle_options: true  # 隨機排列選項,避免位置偏好
+
+logging:
+  level: "INFO"  # 可選: DEBUG, INFO, WARNING, ERROR
