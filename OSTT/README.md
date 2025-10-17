@@ -57,7 +57,7 @@ twinkle-eval --config config.yaml --export json csv html
     - 模型預測答案 vs 正確答案
     - 可用於錯誤分析
 
-### 隨機抽樣評估**
+### 隨機抽樣評估
 
 由於資料集可能很大，此腳本專門用於進行多輪隨機抽樣，以取得更具統計意義的平均準確率和穩定性。
 如果你想在 Python 程式中使用:[run.py](OSTT/run.py)
@@ -65,13 +65,17 @@ twinkle-eval --config config.yaml --export json csv html
 執行指令：
 你需要透過參數指定原始資料集路徑 (--src_dir)。程式會自動創建或使用 dataset_sampled 作為暫存目錄。
 ### 範例：每輪抽樣 50 題(預設)
+```bash
 python run.py \
     --src_dir "/path/to/your/raw/dataset/csvs" \
+```
 
 ### 範例:每輪抽樣 15 題
+```bash
 python run.py \
     --src_dir "/path/to/your/raw/dataset/csvs" \
     --sample_n 15
+```
 
 #### 執行範例與結果 (Example Run)
 
@@ -81,6 +85,7 @@ python run.py \
 
 ```bash
 python run.py --src_dir "/path/to/your/raw/dataset/csvs"
+```
 
 終端機日誌輸出 (節錄)：
 ==============================
