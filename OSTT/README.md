@@ -64,11 +64,11 @@ twinkle-eval --config config.yaml --export json csv html
 
 執行指令：
 你需要透過參數指定原始資料集路徑 (--src_dir)。程式會自動創建或使用 dataset_sampled 作為暫存目錄。
-# 範例：每輪抽樣 50 題(預設)
+### 範例：每輪抽樣 50 題(預設)
 python run.py \
     --src_dir "/path/to/your/raw/dataset/csvs" \
 
-# 範例:每輪抽樣 15 題
+### 範例:每輪抽樣 15 題
 python run.py \
     --src_dir "/path/to/your/raw/dataset/csvs" \
     --sample_n 15
